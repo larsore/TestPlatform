@@ -2,12 +2,11 @@ import numpy as np
 import sympy as sy
 from hashlib import sha256
 
-q = sy.randprime(2**31, 2**(32)-1)
-n = 1024
+q = sy.randprime(2**22, 2**(23)-1)
+n = 1280
 m = 23000
 beta = 2
 betaInterval = np.arange(-beta, beta+1)
-print('Lower limit beta: ', np.sqrt(n*np.log(q)))
 M = 3
 
 # Peggy generates A and secret s
@@ -33,19 +32,28 @@ def rejectionSampling(z, v, dist):
 # Sample commitment w = Ay, receive random challenge c and perform rejection sampling on opening z until algorithm 'accepts'
 
 i = 1
+sd = 0.275*np.linalg.norm(s1)
+step = 5
 while True:
-    y1 = np.random.randint(low=-beta, high=beta+1, size=m) 
-    y2 = np.random.randint(low=-beta, high=beta+1, size=n) 
+    y1 = (np.rint(np.random.normal(0, sd, m))).astype(int)
+    #y1 = np.random.randint(low=-beta, high=beta+1, size=m) 
+    y2 = (np.rint(np.random.normal(0, sd, n))).astype(int)
+    print(y1)
+    #y2 = np.random.randint(low=-beta, high=beta+1, size=n) 
     w = sha256()
     w.update(((np.inner(A, y1) + y2)%q).tobytes())
     c = np.random.randint(low=-beta, high=beta+1)
     z1 = (c*s1 + y1)
     z2 = (c*s2 + y2)
-    rejection1 = rejectionSampling(z1, c*s1, 0.675*np.linalg.norm(c*s1))
-    rejection2 = rejectionSampling(z2, c*s2, 0.675*np.linalg.norm(c*s2))
+    rejection1 = rejectionSampling(z1, c*s1, sd)
+    rejection2 = rejectionSampling(z2, c*s2, sd)
     checkNorm = ((np.all(np.isin(z1, betaInterval))) and (np.all(np.isin(z2, betaInterval))))
     print(i, rejection1, rejection2, checkNorm)
     i+=1
+    print(sd)
+    if sd < 5:
+        step = 0.1
+    sd -= step
     if rejection1 and rejection2 and checkNorm:
         break
 
@@ -56,8 +64,8 @@ h.update(((np.inner(A, z1) + z2 - c*t)%q).tobytes())
 if (h.digest() != w.digest()):
     raise ValueError('A*z1 + z2 - ct is NOT EQUAL to w')
 elif not (np.all(np.isin(z1, betaInterval))):
-    raise ValueError('z1 is not short...\nbeta = %g\n||z1|| = %g' %(beta, np.linalg.norm(z1)))
+    raise ValueError('z1 is not short...')
 elif not (np.all(np.isin(z2, betaInterval))):
-    raise ValueError('z2 is not short...\nbeta = %g\n||z2|| = %g' %(beta, np.linalg.norm(z2)))
+    raise ValueError('z2 is not short...')
 else:
     print('SUCCESS')
