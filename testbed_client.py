@@ -7,8 +7,8 @@ import struct
 server = "ws://localhost:8765"
 
 q = sy.randprime(2**31, 2**(32)-1)
-m = 4 #rader
-n = 12 #kolonner
+m = 4 #kolonner
+n = 12 #rader
 beta = 30
 
 
@@ -31,7 +31,8 @@ binaryA = toBinary(A)
 
 
 #Prover calculates public key t
-t = (A.dot(s))%q
+#t = (A.dot(s))%q
+t = np.inner(A,s)%q
 binaryT = toBinary(t)
 
 
@@ -52,6 +53,9 @@ async def onMessage():
 
         await websocket.send(str(m))
         print("Sent m: ", m, "\n")
+
+        await websocket.send(str(q))
+        print("Sent q: ", q, "\n")
 
         await websocket.send(binaryT)
         print("Sent t = ", t,"\n")

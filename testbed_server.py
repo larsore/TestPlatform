@@ -43,36 +43,38 @@ def unpack_matrix(binary_matrix, dtype=np.int32, shape=None):
     return np.array(binary_vector, dtype=dtype).reshape(shape)
 """
 
-
+##Reshape matrix to same dimensions as the one sent by the prover
 def reshapeMatrix(matrix,m):
     subarrayLength = m
     matrix = np.reshape(matrix, (-1, subarrayLength))
     return matrix
 
-
-
+#Verification of Az = tc + w
 def verification(A,z,t,c,w,q):
-    leftSide = (A.dot(z))%q
+    leftSide = np.inner(A,z)%q
     rightSide = (t*c+w)%q
+    print(leftSide,rightSide)
 
     if np.array_equal(leftSide, rightSide):
-        print("JA!")
+        print("Az == t*c + w")
 
-    if (rightSide.any() != leftSide.any()):
+    elif (rightSide.any() != leftSide.any()):
         raise ValueError('Az != t*c + w')
-    else: 
-        print("SUCCESS")
+    else:
+        print("Az er ikke lik t*c + w")
+ 
+        
 
 #Trengs én handler per connection
 async def handler(websocket):
     while True:
         try:    
             binaryA = await websocket.recv()
-            A = np.frombuffer(binaryA, dtype = int)
-            A = reshapeMatrix(A,4)
+            m = int(await websocket.recv())
+            q = int(await websocket.recv())
 
-            m = await websocket.recv()
-            m = int(m)
+            A = np.frombuffer(binaryA, dtype = int)
+            A = reshapeMatrix(A,m) 
 
             binaryT = await websocket.recv()
             t = np.frombuffer(binaryT, dtype = int)
@@ -91,6 +93,7 @@ async def handler(websocket):
 
         print("Received Matrix A from client : \n" ,A , "\n")
         print("m from client: ", m, "\n")
+        print("q from client: ", q, "\n")
         print("t from client: ", t, "\n")
         print("w from clent: ", w, "\n")
         print("z from client: ", z)
