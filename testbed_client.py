@@ -46,6 +46,7 @@ binaryW = toBinary(w)
 
 async def onMessage():
     async with websockets.connect(server) as websocket:
+        
         await websocket.send(binaryA)
         print("Sent A = \n", str(A),"\n")
 

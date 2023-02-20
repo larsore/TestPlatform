@@ -3,6 +3,15 @@ import websockets
 import numpy as np
 import sympy as sy
 import struct
+import pyfiglet
+from pyfiglet import figlet_format
+import time
+import sys
+
+
+print(pyfiglet.figlet_format("SERVER RUNNING"))
+print("waiting for message from client")
+
 
 client = "ws://localhost:8765"
 
@@ -87,6 +96,8 @@ async def handler(websocket):
         print("z from client: ", z)
 
         verification(A,z,t,c,w,q)
+
+        print("--------------------------------------------------------------------------------")
         
 
 
