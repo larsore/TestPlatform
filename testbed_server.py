@@ -35,11 +35,18 @@ def unpack_matrix(binary_matrix, dtype=np.int32, shape=None):
 """
 
 
+def reshapeMatrix(matrix,m):
+    subarrayLength = m
+    matrix = np.reshape(matrix, (-1, subarrayLength))
+    return matrix
+
+
+
 def verification(A,z,t,c,w,q):
     leftSide = (A.dot(z))%q
     rightSide = (t*c+w)%q
 
-    if leftSide.np.array_equal(rightSide):
+    if np.array_equal(leftSide, rightSide):
         print("JA!")
 
     if (rightSide.any() != leftSide.any()):
@@ -53,6 +60,10 @@ async def handler(websocket):
         try:    
             binaryA = await websocket.recv()
             A = np.frombuffer(binaryA, dtype = int)
+            A = reshapeMatrix(A,4)
+
+            m = await websocket.recv()
+            m = int(m)
 
             binaryT = await websocket.recv()
             t = np.frombuffer(binaryT, dtype = int)
@@ -69,7 +80,8 @@ async def handler(websocket):
         except websockets.ConnectionClosedOK:
             break
 
-        print("Received Matrix A from client : \n," , A, "\n")
+        print("Received Matrix A from client : \n" ,A , "\n")
+        print("m from client: ", m, "\n")
         print("t from client: ", t, "\n")
         print("w from clent: ", w, "\n")
         print("z from client: ", z)

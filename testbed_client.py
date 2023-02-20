@@ -49,6 +49,9 @@ async def onMessage():
         await websocket.send(binaryA)
         print("Sent A = \n", str(A),"\n")
 
+        await websocket.send(str(m))
+        print("Sent m: ", m, "\n")
+
         await websocket.send(binaryT)
         print("Sent t = ", t,"\n")
 
@@ -56,12 +59,14 @@ async def onMessage():
         print("Sent w = ", w,"\n")
 
         challenge = await websocket.recv()
-        print("Challenge from server: ", challenge,"\n")
+        print("Received challenge from server: ", challenge,"\n")
 
         z = (s*int(challenge) + y)
         binaryZ = toBinary(z)
         await websocket.send(binaryZ)
         print("sent z: ", z,"\n")
+
+        print("--------------------------------------------------------------------------------")
         
        
     
