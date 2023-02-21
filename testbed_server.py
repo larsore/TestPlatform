@@ -3,17 +3,18 @@ import websockets
 import numpy as np
 import sympy as sy
 import struct
-import pyfiglet
 from pyfiglet import figlet_format
 import time
 import sys
+from hashlib import sha256
 
 
-print(pyfiglet.figlet_format("SERVER RUNNING"))
+print(figlet_format("SERVER RUNNING"))
 print("waiting for message from client")
 
 
 client = "ws://localhost:8765"
+
 
 q = sy.randprime(2**31, 2**(32)-1)
 
@@ -50,43 +51,58 @@ def reshapeMatrix(matrix,m):
     return matrix
 
 #Verification of Az = tc + w
-def verification(A,z,t,c,w,q):
-    leftSide = np.inner(A,z)%q
-    rightSide = (t*c+w)%q
-    print(leftSide,rightSide)
+def verification(A,z1,z2,t,c,w,q,approxBetaInterval):
+    h = sha256()
+    h.update(((np.inner(A, z1) + z2 - c*t)%q).tobytes())
 
-    if np.array_equal(leftSide, rightSide):
-        print("Az == t*c + w")
-
-    elif (rightSide.any() != leftSide.any()):
-        raise ValueError('Az != t*c + w')
+    if (h.hexdigest() != w):
+        print('A*z1 + z2 - c*t != w')
+        return False
+    elif not (np.all(np.isin(z1, approxBetaInterval))):
+        print('z1 is not short...')
+        return False
+    elif not (np.all(np.isin(z2, approxBetaInterval))):
+        print('z2 is not short...')
+        return False
     else:
-        print("Az er ikke lik t*c + w")
- 
+        print('SUCCESS')
+        return True
+    
         
 
 #Trengs én handler per connection
 async def handler(websocket):
     while True:
         try:    
-            binaryA = await websocket.recv()
+            seed = int(await websocket.recv())
+            n = int(await websocket.recv())
             m = int(await websocket.recv())
             q = int(await websocket.recv())
+            beta = int(await websocket.recv())
+            approxBetaInterval = np.arange(-2*beta, 2*beta+1)
 
-            A = np.frombuffer(binaryA, dtype = int)
-            A = reshapeMatrix(A,m) 
+            np.random.seed(seed)
 
+            A = np.random.randint(low=0, high=q, size=(n, m))
+ 
             binaryT = await websocket.recv()
             t = np.frombuffer(binaryT, dtype = int)
 
-            binaryW = await websocket.recv()
-            w = np.frombuffer(binaryW, dtype = int)
+            w = await websocket.recv()
 
-            c = np.random.randint(0,q-1)
+            c = np.random.randint(-1,2)
             await websocket.send(str(c))
 
-            binaryZ = await websocket.recv()
-            z = np.frombuffer(binaryZ, dtype = int)
+            binaryZ1 = await websocket.recv()
+            binaryZ2 = await websocket.recv()
+
+            z1 = np.frombuffer(binaryZ1, dtype = int)
+            z2 = np.frombuffer(binaryZ2, dtype = int)
+
+            if verification(A,z1,z2,t,c,w,q,approxBetaInterval):
+                await websocket.send('SUCCESS')
+            else:
+                await websocket.send('FAIL')
 
         except websockets.ConnectionClosedOK:
             break
@@ -94,23 +110,18 @@ async def handler(websocket):
         print("Received Matrix A from client : \n" ,A , "\n")
         print("m from client: ", m, "\n")
         print("q from client: ", q, "\n")
+        print("beta from client: ", beta, "\n")
         print("t from client: ", t, "\n")
         print("w from clent: ", w, "\n")
-        print("z from client: ", z)
-
-        verification(A,z,t,c,w,q)
+        print("z1 from client: ", z1)
+        print("z2 from client: ", z2)
 
         print("--------------------------------------------------------------------------------")
         
 
-
-
-
 async def main():
     async with websockets.serve(handler, "localhost", 8765):
         await asyncio.Future() #server runs until manually stopped
-
-
 
 
 if __name__ == "__main__":
