@@ -64,14 +64,17 @@ class Verifier:
                 self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
                 self.t = np.asarray(pk['t'], dtype = int)
     
-                self.w = await websocket.recv()
+                while True:
+                    self.w = await websocket.recv()
 
-                self.c = np.random.randint(-1, 2)
-                await websocket.send(str(self.c))
+                    self.c = np.random.randint(-1, 2)
+                    await websocket.send(str(self.c))
 
-                z = json.loads(await websocket.recv())
-                self.z1 = np.asarray(z['z1'], dtype = int)
-                self.z2 = np.asarray(z['z2'], dtype = int)
+                    z = json.loads(await websocket.recv())
+                    if z['opening'] != 'R':
+                        self.z1 = np.asarray(z['opening'][0], dtype = int)
+                        self.z2 = np.asarray(z['opening'][1], dtype = int)
+                        break
 
                 if self.verification():
                     await websocket.send('SUCCESS')

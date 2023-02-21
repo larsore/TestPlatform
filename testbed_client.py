@@ -8,7 +8,7 @@ import json
 import sys
 
 class Prover:
-    def __init__(self, seed, n, q, beta, M, delta):
+    def __init__(self, seed, n, q, beta, M, delta, iterations):
         self.seed = seed
         np.random.seed(seed)
         self.n = n
@@ -24,10 +24,10 @@ class Prover:
         self.s2 = None
         self.y1 = None
         self.y2 = None
-        self.c = None
         self.z1 = None
         self.z2 = None
-        self.w = None    
+        self.w = None   
+        self.iterations = iterations
 
     def rejectionSampling(self, z, v, dist):
         # Usikker på om dette er greit hvis vi sampler fra uniform-fordeling og ikke guassian??
@@ -42,51 +42,70 @@ class Prover:
     def genPK(self):
         self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
         np.random.seed(None)
-        print(self.A)
         self.s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
         np.random.seed(None)
         self.s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
         np.random.seed(None)
         self.t = (np.inner(self.A,self.s1) + self.s2)%self.q
 
-    def getW(self):
+    def setCommitment(self):
         np.random.seed(None)
         self.y1 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.m) 
         np.random.seed(None)
         self.y2 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.n)
         self.w = sha256()
         self.w.update(((np.inner(self.A, self.y1) + self.y2)%self.q).tobytes())
+    
+    def getCommitment(self):
         return self.w.hexdigest()
 
-    async def sendPK(self, ws):
-        self.genPK()
-        await ws.send(json.dumps({'seed': self.seed, 'n': self.n, 'm': self.m, 'q': self.q, 'beta': self.beta, 't': self.t.tolist()}))
+    def getPK(self):
+        return {'seed': self.seed, 'n': self.n, 'm': self.m, 'q': self.q, 'beta': self.beta, 't': self.t.tolist()}
 
-    async def sendCommitment(self, ws):
-        w = self.getW()
+    async def sendPK(self, ws, pk):
+        await ws.send(json.dumps(pk))
+
+    async def sendCommitment(self, ws, w):
         await ws.send(w)
 
-    async def sendOpening(self, ws):
-        print(type(self.c), type(self.s1), type(self.y1))
-        self.z1 = self.c*self.s1 + self.y1
-        self.z2 = self.c*self.s2 + self.y2
-        await ws.send(json.dumps({'z1': self.z1.tolist(), 'z2': self.z2.tolist()}))
+    def setOpening(self, c):
+        self.z1 = c*self.s1 + self.y1
+        self.z2 = c*self.s2 + self.y2
+        
+    def getOpening(self):
+        return self.z1, self.z2
+    
+    async def sendOpening(self, ws, z1, z2):
+        if not isinstance(z1, str):
+            z1 = z1.tolist()
+            z2 = z2.tolist()
+        await ws.send(json.dumps({'opening': [z1, z2]}))
 
     async def runProtocol(self):
         async with websockets.connect(self.serverURL) as websocket:
-            await self.sendPK(websocket)
+            self.genPK()
+            await self.sendPK(websocket, self.getPK())
             print('PK sent')
-            await self.sendCommitment(websocket)
-            print('Commitment sent')
-            self.c = int(await websocket.recv())
-            print('Challenge received')
-            await self.sendOpening(websocket)
+            while True:
+                self.setCommitment()
+                await self.sendCommitment(websocket, self.getCommitment())
+                print('Commitment sent')
+                c = int(await websocket.recv())
+                print('Challenge received')
+                self.setOpening(c)
+                checkZ1 = self.rejectionSampling(self.getOpening()[0], c*self.s1, 0.675*np.linalg.norm(c*self.s1))
+                checkZ2 = self.rejectionSampling(self.getOpening()[1], c*self.s2, 0.675*np.linalg.norm(c*self.s2))
+                if checkZ1 and checkZ2:
+                    print('Accept')
+                    await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1])
+                    break
+                await self.sendOpening(websocket, 'R', 'R')
+
             print('Opening sent')
             print(await websocket.recv())
 
 if __name__ == "__main__":
-    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01)
-
+    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
     while True:
         if input('Wish to start protocol? ') == 'y':
             asyncio.run(prover.runProtocol())
