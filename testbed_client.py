@@ -2,9 +2,10 @@ import asyncio
 import websockets
 import numpy as np
 import sympy as sy
-import struct
+import os
 from hashlib import sha256
 import json
+import sys
 
 class Prover:
     def __init__(self, seed, n, q, beta, M, delta):
@@ -30,6 +31,7 @@ class Prover:
 
     def rejectionSampling(self, z, v, dist):
         # Usikker på om dette er greit hvis vi sampler fra uniform-fordeling og ikke guassian??
+        np.random.seed(None)
         u = np.random.rand()
         cond = (1/self.M)*np.exp((-2*(np.inner(z, v)) + np.linalg.norm(v)**2)/(2*dist**2))
         if (u > cond):
@@ -39,12 +41,18 @@ class Prover:
     #Returnerer parametere nødvendig for å rekonstruere public key
     def genPK(self):
         self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+        np.random.seed(None)
+        print(self.A)
         self.s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
+        np.random.seed(None)
         self.s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
+        np.random.seed(None)
         self.t = (np.inner(self.A,self.s1) + self.s2)%self.q
 
     def getW(self):
+        np.random.seed(None)
         self.y1 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.m) 
+        np.random.seed(None)
         self.y2 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.n)
         self.w = sha256()
         self.w.update(((np.inner(self.A, self.y1) + self.y2)%self.q).tobytes())
@@ -77,7 +85,7 @@ class Prover:
             print(await websocket.recv())
 
 if __name__ == "__main__":
-    prover = Prover(seed=0, n=1280, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01)
+    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01)
 
     while True:
         if input('Wish to start protocol? ') == 'y':
