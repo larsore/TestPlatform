@@ -7,125 +7,98 @@ from pyfiglet import figlet_format
 import time
 import sys
 from hashlib import sha256
+import json
 
+class Verifier:
+    def __init__(self):
+        self.A = None
+        self.clientURL = 'ws://localhost:8765'
+        self.q = None
+        self.seed = None
+        self.n = None
+        self.m = None
+        self.beta = None
+        self.approxBetaInterval = None
+        self.t = None
+        self.w = None
+        self.c = None
+        self.z1 = None
+        self.z2 = None
 
-print(figlet_format("SERVER RUNNING"))
-print("waiting for message from client")
-
-
-client = "ws://localhost:8765"
-
-
-q = sy.randprime(2**31, 2**(32)-1)
-
-"""
-def unpack(binary_data):
-    # convert binary data to float values
-    integer_values = struct.unpack('%sl' % len(binary_data)//4, binary_data)
-
-    # convert float values to a list
-    data = list(integer_values)
-
-    return data
-
-
-def unpack_vector(binary_vector, dtype=np.int32):
-    '''unpack binary representation of a vector into a numpy array'''
-    size = len(binary_vector) // struct.calcsize(dtype)
-    return np.array(struct.unpack(f'{size}{dtype.char}', binary_vector), dtype=dtype)
-
-def unpack_matrix(binary_matrix, dtype=np.int32, shape=None):
-    '''unpack binary representation of a matrix into a numpy array'''
-    if shape is None:
-        raise ValueError('shape must be specified')
-    rows, cols = shape
-    size = rows * cols
-    binary_vector = struct.unpack(f'{size}{dtype.any}', binary_matrix)
-    return np.array(binary_vector, dtype=dtype).reshape(shape)
-"""
-
-##Reshape matrix to same dimensions as the one sent by the prover
-def reshapeMatrix(matrix,m):
-    subarrayLength = m
-    matrix = np.reshape(matrix, (-1, subarrayLength))
-    return matrix
+    ##Reshape matrix to same dimensions as the one sent by the prover
+    def reshapeMatrix(matrix, m):
+        return np.reshape(matrix, (-1, m))
 
 #Verification of Az = tc + w
-def verification(A,z1,z2,t,c,w,q,approxBetaInterval):
-    h = sha256()
-    h.update(((np.inner(A, z1) + z2 - c*t)%q).tobytes())
+    def verification(self):
+        h = sha256()
+        h.update(((np.inner(self.A, self.z1) + self.z2 - self.c*self.t)%self.q).tobytes())
 
-    if (h.hexdigest() != w):
-        print('A*z1 + z2 - c*t != w')
-        return False
-    elif not (np.all(np.isin(z1, approxBetaInterval))):
-        print('z1 is not short...')
-        return False
-    elif not (np.all(np.isin(z2, approxBetaInterval))):
-        print('z2 is not short...')
-        return False
-    else:
-        print('SUCCESS')
-        return True
+        if (h.hexdigest() != self.w):
+            print('A*z1 + z2 - c*t != w')
+            return False
+        elif not (np.all(np.isin(self.z1, self.approxBetaInterval))):
+            print('z1 is not short...')
+            return False
+        elif not (np.all(np.isin(self.z2, self.approxBetaInterval))):
+            print('z2 is not short...')
+            return False
+        else:
+            print('SUCCESS')
+            return True
+
+    #Trengs én handler per connection
+    async def handler(self, websocket):
+        while True:
+            try:    
+                pk = json.loads(await websocket.recv())
+                print(type(pk))
+                self.seed = pk['seed']
+                self.n = pk['n']
+                self.m = pk['m']
+                self.q = pk['q']
+                self.beta = pk['beta']
+                self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
+                np.random.seed(self.seed)
+
+                self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+                self.t = np.asarray(pk['t'], dtype = int)
     
-        
+                self.w = await websocket.recv()
 
-#Trengs én handler per connection
-async def handler(websocket):
-    while True:
-        try:    
-            seed = int(await websocket.recv())
-            n = int(await websocket.recv())
-            m = int(await websocket.recv())
-            q = int(await websocket.recv())
-            beta = int(await websocket.recv())
-            approxBetaInterval = np.arange(-2*beta, 2*beta+1)
+                self.c = np.random.randint(-1, 2)
+                await websocket.send(str(self.c))
 
-            np.random.seed(seed)
+                z = json.loads(await websocket.recv())
+                self.z1 = np.asarray(z['z1'], dtype = int)
+                self.z2 = np.asarray(z['z2'], dtype = int)
 
-            A = np.random.randint(low=0, high=q, size=(n, m))
- 
-            binaryT = await websocket.recv()
-            t = np.frombuffer(binaryT, dtype = int)
+                if self.verification():
+                    await websocket.send('SUCCESS')
+                else:
+                    await websocket.send('FAIL')
 
-            w = await websocket.recv()
+            except websockets.ConnectionClosedOK:
+                break
 
-            c = np.random.randint(-1,2)
-            await websocket.send(str(c))
+            print("Received Matrix A from client : \n" , self.A , "\n")
+            print("q from client: ", self.q, "\n")
+            print("beta from client: ", self.beta, "\n")
+            print("t from client: ", self.t, "\n")
+            print("Commitment from clent: ", self.w, "\n")
+            print("Opening from client:\n", self.z1, '\n', self.z2)
 
-            binaryZ1 = await websocket.recv()
-            binaryZ2 = await websocket.recv()
-
-            z1 = np.frombuffer(binaryZ1, dtype = int)
-            z2 = np.frombuffer(binaryZ2, dtype = int)
-
-            if verification(A,z1,z2,t,c,w,q,approxBetaInterval):
-                await websocket.send('SUCCESS')
-            else:
-                await websocket.send('FAIL')
-
-        except websockets.ConnectionClosedOK:
-            break
-
-        print("Received Matrix A from client : \n" ,A , "\n")
-        print("m from client: ", m, "\n")
-        print("q from client: ", q, "\n")
-        print("beta from client: ", beta, "\n")
-        print("t from client: ", t, "\n")
-        print("w from clent: ", w, "\n")
-        print("z1 from client: ", z1)
-        print("z2 from client: ", z2)
-
-        print("--------------------------------------------------------------------------------")
-        
-
-async def main():
-    async with websockets.serve(handler, "localhost", 8765):
-        await asyncio.Future() #server runs until manually stopped
-
+            print("--------------------------------------------------------------------------------")
+            
+    async def startServer(self):
+        async with websockets.serve(self.handler, "localhost", 8765):
+            await asyncio.Future() #server runs until manually stopped
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    verifier = Verifier()
+    print(figlet_format("SERVER RUNNING"))
+    print("Waiting for message from client")          
+    asyncio.run(verifier.startServer())
 
 
 
