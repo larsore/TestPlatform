@@ -1,2 +1,3 @@
-# Test Platform
-Repository containing code for the test platform developed while working with our masters thesis.
+# Testbed
+
+Contains client and server communicating over websockets. Client acts as prover, server as verifier. 
