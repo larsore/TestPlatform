@@ -24,6 +24,8 @@ class Verifier:
         self.c = None
         self.z1 = None
         self.z2 = None
+        self.iterations = None
+        self.isIterated = False
 
     ##Reshape matrix to same dimensions as the one sent by the prover
     def reshapeMatrix(matrix, m):
@@ -44,7 +46,6 @@ class Verifier:
             print('z2 is not short...')
             return False
         else:
-            print('SUCCESS')
             return True
 
     #Trengs én handler per connection
@@ -52,47 +53,52 @@ class Verifier:
         while True:
             try:    
                 pk = json.loads(await websocket.recv())
-                print(type(pk))
                 self.seed = pk['seed']
                 self.n = pk['n']
                 self.m = pk['m']
                 self.q = pk['q']
                 self.beta = pk['beta']
                 self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
+                self.iterations = pk['iterations']
                 np.random.seed(self.seed)
 
                 self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
                 self.t = np.asarray(pk['t'], dtype = int)
-    
+                iteration = 1
                 while True:
-                    self.w = await websocket.recv()
+                    while True:
+                        self.w = await websocket.recv()
+                        np.random.seed(None)
+                        self.c = np.random.randint(-1, 2)
+                        await websocket.send(str(self.c))
 
-                    self.c = np.random.randint(-1, 2)
-                    await websocket.send(str(self.c))
-
-                    z = json.loads(await websocket.recv())
-                    if z['opening'] != 'R':
-                        self.z1 = np.asarray(z['opening'][0], dtype = int)
-                        self.z2 = np.asarray(z['opening'][1], dtype = int)
+                        z = json.loads(await websocket.recv())
+                        if z['opening'][0] != 'R':
+                            print('Successful opening received')
+                            self.z1 = np.asarray(z['opening'][0], dtype = int)
+                            self.z2 = np.asarray(z['opening'][1], dtype = int)
+                            break
+                    if iteration != z['iteration']:
+                        print('Iterations failed')
                         break
+                    elif iteration == self.iterations:
+                        print('Iterations done!')
+                        self.isIterated = True
+                        break
+                    print(iteration, ' iterations done')
+                    iteration += 1
 
-                if self.verification():
+                if self.verification() and self.isIterated:
+                    print('SUCCESS')
                     await websocket.send('SUCCESS')
                 else:
+                    print('FAIL')
                     await websocket.send('FAIL')
 
             except websockets.ConnectionClosedOK:
                 break
 
-            print("Received Matrix A from client : \n" , self.A , "\n")
-            print("q from client: ", self.q, "\n")
-            print("beta from client: ", self.beta, "\n")
-            print("t from client: ", self.t, "\n")
-            print("Commitment from clent: ", self.w, "\n")
-            print("Opening from client:\n", self.z1, '\n', self.z2)
-
-            print("--------------------------------------------------------------------------------")
-            
+                        
     async def startServer(self):
         async with websockets.serve(self.handler, "localhost", 8765):
             await asyncio.Future() #server runs until manually stopped

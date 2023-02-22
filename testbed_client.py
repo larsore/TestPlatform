@@ -60,7 +60,7 @@ class Prover:
         return self.w.hexdigest()
 
     def getPK(self):
-        return {'seed': self.seed, 'n': self.n, 'm': self.m, 'q': self.q, 'beta': self.beta, 't': self.t.tolist()}
+        return {'seed': self.seed, 'n': self.n, 'm': self.m, 'q': self.q, 'beta': self.beta, 't': self.t.tolist(), 'iterations': self.iterations}
 
     async def sendPK(self, ws, pk):
         await ws.send(json.dumps(pk))
@@ -75,33 +75,30 @@ class Prover:
     def getOpening(self):
         return self.z1, self.z2
     
-    async def sendOpening(self, ws, z1, z2):
+    async def sendOpening(self, ws, z1, z2, iteration):
         if not isinstance(z1, str):
             z1 = z1.tolist()
             z2 = z2.tolist()
-        await ws.send(json.dumps({'opening': [z1, z2]}))
+        await ws.send(json.dumps({'opening': [z1, z2], 'iteration': iteration}))
 
     async def runProtocol(self):
         async with websockets.connect(self.serverURL) as websocket:
             self.genPK()
             await self.sendPK(websocket, self.getPK())
             print('PK sent')
-            while True:
-                self.setCommitment()
-                await self.sendCommitment(websocket, self.getCommitment())
-                print('Commitment sent')
-                c = int(await websocket.recv())
-                print('Challenge received')
-                self.setOpening(c)
-                checkZ1 = self.rejectionSampling(self.getOpening()[0], c*self.s1, 0.675*np.linalg.norm(c*self.s1))
-                checkZ2 = self.rejectionSampling(self.getOpening()[1], c*self.s2, 0.675*np.linalg.norm(c*self.s2))
-                if checkZ1 and checkZ2:
-                    print('Accept')
-                    await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1])
-                    break
-                await self.sendOpening(websocket, 'R', 'R')
-
-            print('Opening sent')
+            for i in range(1, self.iterations+1):
+                while True:
+                    self.setCommitment()
+                    await self.sendCommitment(websocket, self.getCommitment())
+                    c = int(await websocket.recv())
+                    self.setOpening(c)
+                    checkZ1 = self.rejectionSampling(self.getOpening()[0], c*self.s1, 0.675*np.linalg.norm(c*self.s1))
+                    checkZ2 = self.rejectionSampling(self.getOpening()[1], c*self.s2, 0.675*np.linalg.norm(c*self.s2))
+                    if checkZ1 and checkZ2:
+                        await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1], i)
+                        break
+                    await self.sendOpening(websocket, 'R', 'R', i)
+                print(i, ' openings sent')
             print(await websocket.recv())
 
 if __name__ == "__main__":
