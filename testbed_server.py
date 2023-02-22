@@ -82,7 +82,7 @@ class Verifier:
                         print('Iterations failed')
                         break
                     elif iteration == self.iterations:
-                        print('Iterations done!')
+                        print(iteration, ' iterations done\nFINITO!')
                         self.isIterated = True
                         break
                     print(iteration, ' iterations done')

@@ -6,9 +6,10 @@ import os
 from hashlib import sha256
 import json
 import sys
+from getpass import getpass
 
 class Prover:
-    def __init__(self, seed, n, q, beta, M, delta, iterations):
+    def __init__(self, seed, n, m, q, beta, M, delta, iterations):
         self.seed = seed
         np.random.seed(seed)
         self.n = n
@@ -16,7 +17,7 @@ class Prover:
         self.beta = beta
         self.M = M
         self.delta = delta
-        self.m = int(np.ceil(np.sqrt(n*np.log(q)/np.log(delta))))
+        self.m = m
         self.serverURL = 'ws://localhost:8765'
         self.t = None
         self.A = None
@@ -39,13 +40,13 @@ class Prover:
         return True
 
     #Returnerer parametere nødvendig for å rekonstruere public key
-    def genPK(self):
+    def genPK(self, user):
         self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
-        np.random.seed(None)
+        np.random.seed(user)
         self.s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
-        np.random.seed(None)
         self.s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
-        np.random.seed(None)
+        print(self.s1)
+        print(self.s2)
         self.t = (np.inner(self.A,self.s1) + self.s2)%self.q
 
     def setCommitment(self):
@@ -81,11 +82,11 @@ class Prover:
             z2 = z2.tolist()
         await ws.send(json.dumps({'opening': [z1, z2], 'iteration': iteration}))
 
-    async def runProtocol(self):
+    async def runProtocol(self, user):
         async with websockets.connect(self.serverURL) as websocket:
-            self.genPK()
+            print(user)
+            self.genPK(user=user)
             await self.sendPK(websocket, self.getPK())
-            print('PK sent')
             for i in range(1, self.iterations+1):
                 while True:
                     self.setCommitment()
@@ -98,13 +99,18 @@ class Prover:
                         await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1], i)
                         break
                     await self.sendOpening(websocket, 'R', 'R', i)
-                print(i, ' openings sent')
+                #print(i, ' openings sent')
             print(await websocket.recv())
 
 if __name__ == "__main__":
-    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
+    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, m=1663, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
+    print('Press [1] to login.\nPress [2] to register')
     while True:
-        if input('Wish to start protocol? ') == 'y':
-            asyncio.run(prover.runProtocol())
+        if input('') == '1':
+            uname = input('Username: ')
+            password = getpass()
+            h = sha256()
+            h.update((uname+password).encode())
+            asyncio.run(prover.runProtocol(int(h.hexdigest()[-8:], 16)))
             break
 
