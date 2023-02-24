@@ -74,7 +74,7 @@ class Verifier:
 
                         z = json.loads(await websocket.recv())
                         if z['opening'][0] != 'R':
-                            print('Successful opening received')
+                            #print('Successful opening received')
                             self.z1 = np.asarray(z['opening'][0], dtype = int)
                             self.z2 = np.asarray(z['opening'][1], dtype = int)
                             break
@@ -82,7 +82,7 @@ class Verifier:
                         print('Iterations failed')
                         break
                     elif iteration == self.iterations:
-                        print(iteration, ' iterations done\nFINITO!')
+                        print(iteration, ' iterations done')
                         self.isIterated = True
                         break
                     print(iteration, ' iterations done')
@@ -92,8 +92,16 @@ class Verifier:
                     print('SUCCESS')
                     await websocket.send('SUCCESS')
                 else:
-                    print('FAIL')
+                    #print('FAIL')
                     await websocket.send('FAIL')
+                    print('t =', self.t)
+                    print('w =', self.w)
+                    print('A =', self.A)
+                    print('z1 =', self.z1)
+                    print('z2 =', self.z2)
+                    print()
+                    print('--------------------------------------------------------')
+                    print()
 
             except websockets.ConnectionClosedOK:
                 break

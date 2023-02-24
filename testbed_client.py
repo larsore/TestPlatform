@@ -7,11 +7,12 @@ from hashlib import sha256
 import json
 import sys
 from getpass import getpass
+import time
+import matplotlib.pyplot as plt
 
 class Prover:
-    def __init__(self, seed, n, m, q, beta, M, delta, iterations):
+    def __init__(self, seed, M, delta, n=None, m=None, q=None, beta=None, iterations=None):
         self.seed = seed
-        np.random.seed(seed)
         self.n = n
         self.q = q
         self.beta = beta
@@ -29,6 +30,9 @@ class Prover:
         self.z2 = None
         self.w = None   
         self.iterations = iterations
+        self.paramPlotData = []
+        self.timePlotData = []
+        self.testIteration = 1
 
     def rejectionSampling(self, z, v, dist):
         # Usikker på om dette er greit hvis vi sampler fra uniform-fordeling og ikke guassian??
@@ -41,12 +45,13 @@ class Prover:
 
     #Returnerer parametere nødvendig for å rekonstruere public key
     def genPK(self, user):
+        np.random.seed(self.seed)
         self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
         np.random.seed(user)
         self.s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
         self.s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
-        print(self.s1)
-        print(self.s2)
+        #print(self.s1)
+        #print(self.s2)
         self.t = (np.inner(self.A,self.s1) + self.s2)%self.q
 
     def setCommitment(self):
@@ -61,7 +66,15 @@ class Prover:
         return self.w.hexdigest()
 
     def getPK(self):
-        return {'seed': self.seed, 'n': self.n, 'm': self.m, 'q': self.q, 'beta': self.beta, 't': self.t.tolist(), 'iterations': self.iterations}
+        return {
+            'seed': self.seed, 
+            'n': self.n, 
+            'm': self.m, 
+            'q': self.q, 
+            'beta': self.beta, 
+            't': self.t.tolist(), 
+            'iterations': self.iterations
+        }
 
     async def sendPK(self, ws, pk):
         await ws.send(json.dumps(pk))
@@ -84,7 +97,7 @@ class Prover:
 
     async def runProtocol(self, user):
         async with websockets.connect(self.serverURL) as websocket:
-            print(user)
+            #print(user)
             self.genPK(user=user)
             await self.sendPK(websocket, self.getPK())
             for i in range(1, self.iterations+1):
@@ -99,11 +112,33 @@ class Prover:
                         await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1], i)
                         break
                     await self.sendOpening(websocket, 'R', 'R', i)
-                #print(i, ' openings sent')
-            print(await websocket.recv())
+                print(i, ' openings sent')
+            result = await websocket.recv()
+            print(result)
+            if result == 'FAIL':
+                print('Iteration no.', self.testIteration, 'failed')
+                print('t =', self.t)
+                print('w = ', self.w.hexdigest())
+                print('A = ', self.A)
+                print('z1 =', self.z1)
+                print('z2 =', self.z2)
+                print()
+                print('--------------------------------------------------------')
+                print()
+
+    async def testProtocol(self, r, user):
+        for val in r:
+            self.beta = val
+            print(self.q)
+            start = time.time()
+            await self.runProtocol(user=user)
+            stop = time.time()
+            self.paramPlotData.append(val)
+            self.timePlotData.append((stop-start))
+            self.testIteration += 1
 
 if __name__ == "__main__":
-    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, m=1663, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
+    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, m=1430, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
     print('Press [1] to login.\nPress [2] to register')
     while True:
         if input('') == '1':
@@ -111,6 +146,13 @@ if __name__ == "__main__":
             password = getpass()
             h = sha256()
             h.update((uname+password).encode())
-            asyncio.run(prover.runProtocol(int(h.hexdigest()[-8:], 16)))
+            # Muligens for lite rom med kun de 8 siste bitsa av hash-outputen
+            asyncio.run(prover.runProtocol(user=int(h.hexdigest()[-8:], 16)))
             break
-
+"""
+    plt.plot(prover.paramPlotData, prover.timePlotData)
+    plt.xlabel('beta')
+    plt.ylabel('s')
+    plt.title('Time spent on completing 1 iteration with beta in [1, 10000]')
+    plt.show()
+"""
