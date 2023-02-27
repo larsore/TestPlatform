@@ -6,12 +6,8 @@ testplatformDB = myclient["TestplatformDatabase"]
 
 userCollection = testplatformDB['Users']
 
-myDict = {
-    'seed': 12,
-    '_id': np.asarray([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).tobytes()
-}
+cursor = userCollection.find({})
+for document in cursor:
+    print(document['_id'])
 
-t = np.asarray([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-
-print(userCollection.find_one({'_id': t.tobytes()}))
     

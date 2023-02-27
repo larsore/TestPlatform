@@ -1,6 +1,10 @@
-import os
 import numpy as np
 
 np.random.seed(None)
-print(np.random.randint(0, 11))
-print(os.urandom)
+t=0
+for i in range(1000):
+    c = np.random.randint(low=-1, high=2)
+    if c == 0:
+        t += 1
+
+print(t)

@@ -11,28 +11,64 @@ import time
 import matplotlib.pyplot as plt
 
 class Prover:
-    def __init__(self, seed, M, delta, n=None, m=None, q=None, beta=None, iterations=None):
-        self.seed = seed
-        self.n = n
-        self.q = q
-        self.beta = beta
-        self.M = M
-        self.delta = delta
-        self.m = m
+    def __init__(self):
         self.serverURL = 'ws://localhost:8765'
-        self.t = None
-        self.A = None
-        self.s1 = None
-        self.s2 = None
-        self.y1 = None
-        self.y2 = None
-        self.z1 = None
-        self.z2 = None
-        self.w = None   
-        self.iterations = iterations
+
+        self.n = 1280
+        self.m = 1690
+        self.q = 4002909139 # 32-bit prime
+        self.beta = 2
+        self.M = 3
+       
         self.paramPlotData = []
         self.timePlotData = []
         self.testIteration = 1
+
+    def getPK(self, username, secret):
+        uhash = int(sha256(username.encode()).hexdigest()[:8], 16)
+        secretHash = int(sha256((secret).encode()).hexdigest()[:8], 16)
+        np.random.seed(uhash)
+        A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+        np.random.seed(secretHash)
+        s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
+        s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
+        t = (np.inner(A, s1) + s2)%self.q
+        return {
+            'uhash': uhash,
+            'secretHash': secretHash,
+            't': t
+        }
+        
+
+    def getCommitment(self, A):
+        np.random.seed(None)
+        y1 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.m) 
+        #y1 = np.asarray([1 for i in range(self.m)])
+        np.random.seed(None)
+        y2 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.n)
+        #y2 = np.asarray([1 for i in range(self.n)])
+        w = sha256((((np.inner(A, y1) + y2)%self.q).tobytes()))
+        return {
+            'y1': y1,
+            'y2': y2,
+            'w': w.hexdigest()
+        } 
+
+    def getOpening(self, s1, s2, y1, y2, c):
+        z1 = c*s1 + y1
+        z2 = c*s2 + y2
+        return {
+            'z1': z1,
+            'z2': z2,
+        }
+    
+    async def sendOpening(self, ws, iteration=None, opening=None):
+        if opening != None:
+            z1 = opening[0].tolist()
+            z2 = opening[1].tolist()
+            await ws.send(json.dumps({'z1': z1, 'z2': z2, 'iteration': iteration}))
+        else:
+            await ws.send(json.dumps('R'))
 
     def rejectionSampling(self, z, v, dist):
         # Usikker på om dette er greit hvis vi sampler fra uniform-fordeling og ikke guassian??
@@ -42,113 +78,95 @@ class Prover:
         if (u > cond):
             return False
         return True
-
-    #Returnerer parametere nødvendig for å rekonstruere public key
-    def genPK(self, user):
-        np.random.seed(self.seed)
-        self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
-        np.random.seed(user)
-        self.s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
-        self.s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)
-        #print(self.s1)
-        #print(self.s2)
-        self.t = (np.inner(self.A,self.s1) + self.s2)%self.q
-
-    def setCommitment(self):
-        np.random.seed(None)
-        self.y1 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.m) 
-        np.random.seed(None)
-        self.y2 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.n)
-        self.w = sha256()
-        self.w.update(((np.inner(self.A, self.y1) + self.y2)%self.q).tobytes())
     
-    def getCommitment(self):
-        return self.w.hexdigest()
-
-    def getPK(self):
-        return {
-            'seed': self.seed, 
-            'n': self.n, 
-            'm': self.m, 
-            'q': self.q, 
-            'beta': self.beta, 
-            't': self.t.tolist(), 
-            'iterations': self.iterations
-        }
-
-    async def sendPK(self, ws, pk):
-        await ws.send(json.dumps(pk))
-
-    async def sendCommitment(self, ws, w):
-        await ws.send(w)
-
-    def setOpening(self, c):
-        self.z1 = c*self.s1 + self.y1
-        self.z2 = c*self.s2 + self.y2
-        
-    def getOpening(self):
-        return self.z1, self.z2
-    
-    async def sendOpening(self, ws, z1, z2, iteration):
-        if not isinstance(z1, str):
-            z1 = z1.tolist()
-            z2 = z2.tolist()
-        await ws.send(json.dumps({'opening': [z1, z2], 'iteration': iteration}))
-
-    async def runProtocol(self, user):
+    async def authenticate(self, username, secret):
         async with websockets.connect(self.serverURL) as websocket:
-            #print(user)
-            self.genPK(user=user)
-            await self.sendPK(websocket, self.getPK())
-            for i in range(1, self.iterations+1):
-                while True:
-                    self.setCommitment()
-                    await self.sendCommitment(websocket, self.getCommitment())
-                    c = int(await websocket.recv())
-                    self.setOpening(c)
-                    checkZ1 = self.rejectionSampling(self.getOpening()[0], c*self.s1, 0.675*np.linalg.norm(c*self.s1))
-                    checkZ2 = self.rejectionSampling(self.getOpening()[1], c*self.s2, 0.675*np.linalg.norm(c*self.s2))
-                    if checkZ1 and checkZ2:
-                        await self.sendOpening(websocket, self.getOpening()[0], self.getOpening()[1], i)
-                        break
-                    await self.sendOpening(websocket, 'R', 'R', i)
-                print(i, ' openings sent')
-            result = await websocket.recv()
-            print(result)
-            if result == 'FAIL':
-                print('Iteration no.', self.testIteration, 'failed')
-                print('t =', self.t)
-                print('w = ', self.w.hexdigest())
-                print('A = ', self.A)
-                print('z1 =', self.z1)
-                print('z2 =', self.z2)
-                print()
-                print('--------------------------------------------------------')
-                print()
+            # Let server know that you are going to authenticate
+            await websocket.send(json.dumps('A'))
+            await websocket.send(json.dumps(username))
+            
+            pk = self.getPK(username=username, secret=secret)
+            np.random.seed(pk['uhash'])
+            A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+            np.random.seed(pk['secretHash'])
+            s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
+            s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)        
+            iterations = json.loads(await websocket.recv())
+            if not isinstance(iterations, str):
+                for i in range(1, iterations+1):
+                    while True:
+                        commitment = self.getCommitment(A=A)
+                        await websocket.send(commitment['w'])
+                        c = json.loads(await websocket.recv())
+                        print(c)
+                        if not isinstance(c, str):
+                            opening = self.getOpening(s1, s2, commitment['y1'], commitment['y2'], c)
+                            
+                            checkZ1 = self.rejectionSampling(opening['z1'], c*s1, 0.675*np.linalg.norm(c*s1))
+                            checkZ2 = self.rejectionSampling(opening['z2'], c*s2, 0.675*np.linalg.norm(c*s2))
+                            if checkZ1 and checkZ2:
+                                
+                                await self.sendOpening(websocket, iteration=i, opening=[opening['z1'], opening['z2']])
+                                break
+                            await self.sendOpening(websocket)
+                        else:
+                            raise StopIteration(c)
+                    print(i, ' openings sent')
+                result = await websocket.recv()
+                print(result)
+                if result == 'FAIL':
+                    print('Iteration no.', self.testIteration, 'failed')
+                    
+                    
+            else:
+                print(iterations)
 
-    async def testProtocol(self, r, user):
+    async def register(self, username, secret):
+        #if len(secret) < 8:
+        #    print('Secret cannot be shorter than 8 characters')
+        #    return
+        # Let server know that you are going to register
+        async with websockets.connect(self.serverURL) as websocket:
+            await websocket.send(json.dumps('R'))
+            pk = self.getPK(username=username, secret=secret)
+            await websocket.send(json.dumps({
+                'seed': pk['uhash'],
+                't': pk['t'].tolist(),
+                'uname': username
+            }))
+            print(json.loads(await websocket.recv()))
+
+
+    async def testProtocol(self, r):
         for val in r:
             self.beta = val
             print(self.q)
             start = time.time()
-            await self.runProtocol(user=user)
+            await self.runProtocol()
             stop = time.time()
             self.paramPlotData.append(val)
             self.timePlotData.append((stop-start))
             self.testIteration += 1
 
 if __name__ == "__main__":
-    prover = Prover(seed=int.from_bytes(os.urandom(4), sys.byteorder), n=1280, m=1430, q=sy.randprime(2**22, 2**(23)-1), beta=2, M=3, delta=1.01, iterations=100)
-    print('Press [1] to login.\nPress [2] to register')
+        
+    prover = Prover()
+
     while True:
-        if input('') == '1':
-            uname = input('Username: ')
-            password = getpass()
-            h = sha256()
-            h.update((uname+password).encode())
-            # Muligens for lite rom med kun de 8 siste bitsa av hash-outputen
-            asyncio.run(prover.runProtocol(user=int(h.hexdigest()[-8:], 16)))
-            break
+        print('Press [1] to login.\nPress [2] to register')
+        choice = input('')
+        
+        uname = input('Username: ')
+        secret = input('Secret: ')
+        # Muligens for lite rom med kun de 8 siste bitsa av hash-outputen
+
+        if choice == '1':
+            asyncio.run(prover.authenticate(username=uname, secret=secret))
+        
+        elif choice == '2':
+            asyncio.run(prover.register(username=uname, secret=secret))
+        
+
 """
     plt.plot(prover.paramPlotData, prover.timePlotData)
     plt.xlabel('beta')

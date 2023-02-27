@@ -8,100 +8,133 @@ import time
 import sys
 from hashlib import sha256
 import json
+import pymongo
 
 class Verifier:
-    def __init__(self):
-        self.A = None
+    def __init__(self, iterations):
         self.clientURL = 'ws://localhost:8765'
-        self.q = None
-        self.seed = None
-        self.n = None
-        self.m = None
-        self.beta = None
-        self.approxBetaInterval = None
-        self.t = None
-        self.w = None
-        self.c = None
-        self.z1 = None
-        self.z2 = None
-        self.iterations = None
-        self.isIterated = False
+        dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
+        db = dbClient['TestplatformDatabase']
+        self.userCol = db['Users']
 
-    ##Reshape matrix to same dimensions as the one sent by the prover
-    def reshapeMatrix(matrix, m):
-        return np.reshape(matrix, (-1, m))
+        self.n = 1280
+        self.m = 1690
+        self.q = 4002909139 # 32-bit prime
+        self.beta = 2
+        self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
+
+        self.iterations = iterations
+        self.isIterated = False
+        self.authenticated = False
 
 #Verification of Az = tc + w
-    def verification(self):
+    def verification(self, A, t, z1, z2, c, w):
         h = sha256()
-        h.update(((np.inner(self.A, self.z1) + self.z2 - self.c*self.t)%self.q).tobytes())
+        h.update(((np.inner(A, z1) + z2 - c*t)%self.q).tobytes())
 
-        if (h.hexdigest() != self.w):
-            print('A*z1 + z2 - c*t != w')
-            return False
-        elif not (np.all(np.isin(self.z1, self.approxBetaInterval))):
-            print('z1 is not short...')
-            return False
-        elif not (np.all(np.isin(self.z2, self.approxBetaInterval))):
-            print('z2 is not short...')
-            return False
+        if (h.hexdigest() != w):
+            print()
+            return {
+                'result': False,
+                'reason': 'A*z1 + z2 - c*t != w'
+            }
+        elif not (np.all(np.isin(z1, self.approxBetaInterval))):
+            print()
+            return {
+                'result': False,
+                'reason': 'z1 is not short...' 
+            }
+        elif not (np.all(np.isin(z2, self.approxBetaInterval))):
+            print()
+            return {
+                'result': False,
+                'reason': 'z2 is not short...'
+            }
         else:
-            return True
+            return {
+                'result': True,
+                'reason': 'You know the secret'
+            }
+
+    async def handleRegister(self, ws):
+        regData = json.loads(await ws.recv())
+        checkUser = self.userCol.find_one({
+            '_id': regData['uname']
+        })
+        if checkUser == None:
+            doc = {
+                '_id': regData['uname'],
+                't': regData['t'],
+                'seed': regData['seed']
+            }
+            regUser = self.userCol.insert_one(doc)
+            print(regUser.inserted_id + ' was successfully registered!')
+            await ws.send(json.dumps(regUser.inserted_id + ' was successfully registered!'))
+        else:
+            print(regData['uname'] + ' already exists in DB')
+            await ws.send(json.dumps('A user with the username "'+ regData['uname'] + '" already exists'))
+
+
+    async def handleAuth(self, ws):
+        uname = json.loads(await ws.recv())
+        user = self.userCol.find_one({
+            '_id': uname
+        })
+        if user != None:
+            np.random.seed(user['seed'])
+            A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+            t = np.asarray(user['t'], dtype = int)
+            await ws.send(json.dumps(self.iterations))
+            iteration = 1
+            while True:
+                while True:
+                    w = await ws.recv()
+                    np.random.seed(None)
+                    c = np.random.randint(low=-1, high=2)
+                    print(c)
+                    await ws.send(json.dumps(c))
+
+                    opening = json.loads(await ws.recv())
+                    if opening != 'R':
+                        z1 = np.asarray(opening['z1'], dtype = int)
+                        z2 = np.asarray(opening['z2'], dtype = int)
+                        verified = self.verification(A=A, t=t, z1=z1, z2=z2, c=c, w=w)
+                        if not verified['result']:
+                            await ws.send(json.dumps('Authentication failed'))
+                            raise StopIteration(verified['reason'])
+                        break
+                
+                if iteration != opening['iteration']:
+                    print('Iterations failed')
+                    break
+                elif iteration == self.iterations:
+                    print(iteration, ' iterations done')
+                    self.isIterated = True
+                    self.authenticated = True
+                    break
+                print(iteration, ' iterations done')
+                iteration += 1
+
+            if self.authenticated and self.isIterated:
+                print('SUCCESS')
+                await ws.send('SUCCESS')
+            else:
+                await ws.send('FAIL')
+                
+        else:
+            print('Failed login attempt on un-registered user')
+            await ws.send(json.dumps(uname+' has not been registered'))
 
     #Trengs én handler per connection
-    async def handler(self, websocket):
+    async def handler(self, ws):
         while True:
-            try:    
-                pk = json.loads(await websocket.recv())
-                self.seed = pk['seed']
-                self.n = pk['n']
-                self.m = pk['m']
-                self.q = pk['q']
-                self.beta = pk['beta']
-                self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
-                self.iterations = pk['iterations']
-                np.random.seed(self.seed)
-
-                self.A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
-                self.t = np.asarray(pk['t'], dtype = int)
-                iteration = 1
-                while True:
-                    while True:
-                        self.w = await websocket.recv()
-                        np.random.seed(None)
-                        self.c = np.random.randint(-1, 2)
-                        await websocket.send(str(self.c))
-
-                        z = json.loads(await websocket.recv())
-                        if z['opening'][0] != 'R':
-                            #print('Successful opening received')
-                            self.z1 = np.asarray(z['opening'][0], dtype = int)
-                            self.z2 = np.asarray(z['opening'][1], dtype = int)
-                            break
-                    if iteration != z['iteration']:
-                        print('Iterations failed')
-                        break
-                    elif iteration == self.iterations:
-                        print(iteration, ' iterations done')
-                        self.isIterated = True
-                        break
-                    print(iteration, ' iterations done')
-                    iteration += 1
-
-                if self.verification() and self.isIterated:
-                    print('SUCCESS')
-                    await websocket.send('SUCCESS')
+            try:
+                action = json.loads(await ws.recv())
+                if action == 'R':
+                    await self.handleRegister(ws)
                 else:
-                    #print('FAIL')
-                    await websocket.send('FAIL')
-                    print('t =', self.t)
-                    print('w =', self.w)
-                    print('A =', self.A)
-                    print('z1 =', self.z1)
-                    print('z2 =', self.z2)
-                    print()
-                    print('--------------------------------------------------------')
-                    print()
+                    await self.handleAuth(ws)
+                
 
             except websockets.ConnectionClosedOK:
                 break
@@ -112,7 +145,7 @@ class Verifier:
             await asyncio.Future() #server runs until manually stopped
 
 if __name__ == "__main__":
-    verifier = Verifier()
+    verifier = Verifier(iterations=100)
     print(figlet_format("SERVER RUNNING"))
     print("Waiting for message from client")          
     asyncio.run(verifier.startServer())
