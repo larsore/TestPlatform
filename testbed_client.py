@@ -1,11 +1,8 @@
 import asyncio
 import websockets
 import numpy as np
-import sympy as sy
-import os
 from hashlib import sha256
 import json
-import sys
 from getpass import getpass
 import time
 import matplotlib.pyplot as plt

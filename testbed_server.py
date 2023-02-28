@@ -2,18 +2,16 @@ import asyncio
 import websockets
 import numpy as np
 import sympy as sy
-import struct
 from pyfiglet import figlet_format
-import time
-import sys
 from hashlib import sha256
 import json
 import pymongo
-import socket
+import os
+import signal
+
 
 class Verifier:
     def __init__(self, iterations):
-        self.clientURL = 'ws://localhost:8765'
         dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
         db = dbClient['TestplatformDatabase']
         self.userCol = db['Users']
@@ -28,10 +26,7 @@ class Verifier:
         self.isIterated = False
         self.authenticated = False
 
-        hostname=socket.gethostname()
-        IPAddr=socket.gethostbyname(hostname)
-        print("Your Computer IP Address is:"+IPAddr)
-
+        
 #Verification of Az = tc + w
     def verification(self, A, t, z1, z2, c, w):
         h = sha256()
@@ -150,8 +145,14 @@ class Verifier:
 
                         
     async def startServer(self):
-        async with websockets.serve(self.handler, "localhost", 8765):
-            await asyncio.Future() #server runs until manually stopped
+        # Set the stop condition when receiving SIGTERM.
+        loop = asyncio.get_running_loop()
+        stop = loop.create_future()
+        loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+
+        port = int(os.environ.get("PORT", "8001"))
+        async with websockets.serve(self.handler, "", port):
+            await stop()
 
 if __name__ == "__main__":
     verifier = Verifier(iterations=100)
