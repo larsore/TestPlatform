@@ -6,8 +6,7 @@ testplatformDB = myclient["TestplatformDatabase"]
 
 userCollection = testplatformDB['Users']
 
-cursor = userCollection.find({})
-for document in cursor:
-    print(document['_id'])
+cursor = userCollection.delete_many({})
+
 
     

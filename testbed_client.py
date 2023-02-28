@@ -18,6 +18,7 @@ class Prover:
         self.m = 1690
         self.q = 4002909139 # 32-bit prime
         self.beta = 2
+        self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
         self.M = 3
        
         self.paramPlotData = []
@@ -26,7 +27,7 @@ class Prover:
 
     def getPK(self, username, secret):
         uhash = int(sha256(username.encode()).hexdigest()[:8], 16)
-        secretHash = int(sha256((secret).encode()).hexdigest()[:8], 16)
+        secretHash = int(sha256((username+secret).encode()).hexdigest()[:8], 16)
         np.random.seed(uhash)
         A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
         np.random.seed(secretHash)
@@ -39,7 +40,6 @@ class Prover:
             't': t
         }
         
-
     def getCommitment(self, A):
         np.random.seed(None)
         y1 = np.random.randint(low=-self.beta, high=self.beta+1, size=self.m) 
@@ -71,53 +71,57 @@ class Prover:
             await ws.send(json.dumps('R'))
 
     def rejectionSampling(self, z, v, dist):
-        # Usikker på om dette er greit hvis vi sampler fra uniform-fordeling og ikke guassian??
-        np.random.seed(None)
+        # Enkel beta-rejection som vi er usikre på om gjør z og s uavhengige
+        if np.all(np.isin(z, self.approxBetaInterval)):
+            return True
+        return False
+        
+        # Rejsection sampling ut ifra en Gauss fordeling
+        """np.random.seed(None)
         u = np.random.rand()
         cond = (1/self.M)*np.exp((-2*(np.inner(z, v)) + np.linalg.norm(v)**2)/(2*dist**2))
         if (u > cond):
             return False
-        return True
+        return True"""
     
     async def authenticate(self, username, secret):
         async with websockets.connect(self.serverURL) as websocket:
             # Let server know that you are going to authenticate
             await websocket.send(json.dumps('A'))
             await websocket.send(json.dumps(username))
-            
             pk = self.getPK(username=username, secret=secret)
             np.random.seed(pk['uhash'])
             A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
             np.random.seed(pk['secretHash'])
             s1 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.m)
             s2 = np.random.randint(low=-self.beta, high=self.beta+1, size = self.n)        
-            iterations = json.loads(await websocket.recv())
+            iterations = json.loads(await websocket.recv()) #Integritetssjekk på dette for å forsikre at en MitM ikke har endret verdien
             if not isinstance(iterations, str):
                 for i in range(1, iterations+1):
                     while True:
                         commitment = self.getCommitment(A=A)
                         await websocket.send(commitment['w'])
+                        print('Coommitment w =', commitment['w'], 'sent')
                         c = json.loads(await websocket.recv())
-                        print(c)
+                        print('CHallenge c =', c, 'received')
                         if not isinstance(c, str):
                             opening = self.getOpening(s1, s2, commitment['y1'], commitment['y2'], c)
-                            
                             checkZ1 = self.rejectionSampling(opening['z1'], c*s1, 0.675*np.linalg.norm(c*s1))
                             checkZ2 = self.rejectionSampling(opening['z2'], c*s2, 0.675*np.linalg.norm(c*s2))
                             if checkZ1 and checkZ2:
-                                
+                                print('Accepted!')
                                 await self.sendOpening(websocket, iteration=i, opening=[opening['z1'], opening['z2']])
+                                print('Opening sent')
                                 break
                             await self.sendOpening(websocket)
+                            print('Rejected!')
                         else:
                             raise StopIteration(c)
                     print(i, ' openings sent')
                 result = await websocket.recv()
                 print(result)
                 if result == 'FAIL':
-                    print('Iteration no.', self.testIteration, 'failed')
-                    
-                    
+                    print('Iteration no.', self.testIteration, 'failed')                   
             else:
                 print(iterations)
 

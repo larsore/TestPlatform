@@ -9,6 +9,7 @@ import sys
 from hashlib import sha256
 import json
 import pymongo
+import socket
 
 class Verifier:
     def __init__(self, iterations):
@@ -26,6 +27,10 @@ class Verifier:
         self.iterations = iterations
         self.isIterated = False
         self.authenticated = False
+
+        hostname=socket.gethostname()
+        IPAddr=socket.gethostbyname(hostname)
+        print("Your Computer IP Address is:"+IPAddr)
 
 #Verification of Az = tc + w
     def verification(self, A, t, z1, z2, c, w):
@@ -89,19 +94,23 @@ class Verifier:
             while True:
                 while True:
                     w = await ws.recv()
+                    print('Commitment w = ', w, 'received')
                     np.random.seed(None)
                     c = np.random.randint(low=-1, high=2)
-                    print(c)
+                    print('Challenge c =',c, 'drawn')
                     await ws.send(json.dumps(c))
 
                     opening = json.loads(await ws.recv())
                     if opening != 'R':
                         z1 = np.asarray(opening['z1'], dtype = int)
                         z2 = np.asarray(opening['z2'], dtype = int)
+                        print('Opening received')
                         verified = self.verification(A=A, t=t, z1=z1, z2=z2, c=c, w=w)
                         if not verified['result']:
+                            print('Opening NOT accepted')
                             await ws.send(json.dumps('Authentication failed'))
                             raise StopIteration(verified['reason'])
+                        print('Opening accepted')
                         break
                 
                 if iteration != opening['iteration']:
