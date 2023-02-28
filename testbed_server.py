@@ -6,8 +6,6 @@ from pyfiglet import figlet_format
 from hashlib import sha256
 import json
 import pymongo
-import os
-import signal
 
 
 class Verifier:
@@ -25,6 +23,8 @@ class Verifier:
         self.iterations = iterations
         self.isIterated = False
         self.authenticated = False
+
+        
 
         
 #Verification of Az = tc + w
@@ -145,14 +145,8 @@ class Verifier:
 
                         
     async def startServer(self):
-        # Set the stop condition when receiving SIGTERM.
-        loop = asyncio.get_running_loop()
-        stop = loop.create_future()
-        loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
-
-        port = int(os.environ.get("PORT", "8001"))
-        async with websockets.serve(self.handler, "", port):
-            await stop()
+        async with websockets.serve(self.handler, port=8765):
+            await asyncio.Future() #server runs until manually stopped
 
 if __name__ == "__main__":
     verifier = Verifier(iterations=100)
