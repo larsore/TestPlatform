@@ -74,7 +74,6 @@ class Verifier:
             print(regData['uname'] + ' already exists in DB')
             await ws.send(json.dumps('A user with the username "'+ regData['uname'] + '" already exists'))
 
-
     async def handleAuth(self, ws):
         uname = json.loads(await ws.recv())
         user = self.userCol.find_one({
@@ -145,7 +144,7 @@ class Verifier:
 
                         
     async def startServer(self):
-        async with websockets.serve(self.handler, port=8765):
+        async with websockets.serve(self.handler, "localhost", port=8765):
             await asyncio.Future() #server runs until manually stopped
 
 if __name__ == "__main__":

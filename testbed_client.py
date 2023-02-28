@@ -98,9 +98,9 @@ class Prover:
                     while True:
                         commitment = self.getCommitment(A=A)
                         await websocket.send(commitment['w'])
-                        print('Coommitment w =', commitment['w'], 'sent')
+                        print('Commitment w =', commitment['w'], 'sent')
                         c = json.loads(await websocket.recv())
-                        print('CHallenge c =', c, 'received')
+                        print('Challenge c =', c, 'received')
                         if not isinstance(c, str):
                             opening = self.getOpening(s1, s2, commitment['y1'], commitment['y2'], c)
                             checkZ1 = self.rejectionSampling(opening['z1'], c*s1, 0.675*np.linalg.norm(c*s1))
@@ -113,7 +113,7 @@ class Prover:
                             await self.sendOpening(websocket)
                             print('Rejected!')
                         else:
-                            raise StopIteration(c)
+                            return
                     print(i, ' openings sent')
                 result = await websocket.recv()
                 print(result)
