@@ -9,28 +9,29 @@ import pymongo
 
 
 class Verifier:
-    def __init__(self, iterations):
-        dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
-        db = dbClient['TestplatformDatabase']
-        self.userCol = db['Users']
 
-        self.n = 1280
-        self.m = 1690
-        self.q = 4002909139 # 32-bit prime
-        self.beta = 2
-        self.approxBetaInterval = np.arange(-2*self.beta, 2*self.beta+1)
+    dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
+    db = dbClient['TestplatformDatabase']
+    userCol = db['Users']
 
-        self.iterations = iterations
-        self.isIterated = False
-        self.authenticated = False
+    n = 1280
+    m = 1690
+    q = 4002909139 # 32-bit prime
+    beta = 2
+    approxBetaInterval = np.arange(-2*beta, 2*beta+1)
 
+    isIterated = False
+    authenticated = False
+    iterations = None
+
+    @classmethod
+    def __init__(cls, iterations):
+        cls.iterations = iterations
         
-
-        
-#Verification of Az = tc + w
-    def verification(self, A, t, z1, z2, c, w):
+    @classmethod
+    def verification(cls, A, t, z1, z2, c, w):
         h = sha256()
-        h.update(((np.inner(A, z1) + z2 - c*t)%self.q).tobytes())
+        h.update(((np.inner(A, z1) + z2 - c*t)%cls.q).tobytes())
 
         if (h.hexdigest() != w):
             print()
@@ -38,13 +39,13 @@ class Verifier:
                 'result': False,
                 'reason': 'A*z1 + z2 - c*t != w'
             }
-        elif not (np.all(np.isin(z1, self.approxBetaInterval))):
+        elif not (np.all(np.isin(z1, cls.approxBetaInterval))):
             print()
             return {
                 'result': False,
                 'reason': 'z1 is not short...' 
             }
-        elif not (np.all(np.isin(z2, self.approxBetaInterval))):
+        elif not (np.all(np.isin(z2, cls.approxBetaInterval))):
             print()
             return {
                 'result': False,
@@ -56,9 +57,10 @@ class Verifier:
                 'reason': 'You know the secret'
             }
 
-    async def handleRegister(self, ws):
+    @classmethod
+    async def handleRegister(cls, ws):
         regData = json.loads(await ws.recv())
-        checkUser = self.userCol.find_one({
+        checkUser = cls.userCol.find_one({
             '_id': regData['uname']
         })
         if checkUser == None:
@@ -67,23 +69,24 @@ class Verifier:
                 't': regData['t'],
                 'seed': regData['seed']
             }
-            regUser = self.userCol.insert_one(doc)
+            regUser = cls.userCol.insert_one(doc)
             print(regUser.inserted_id + ' was successfully registered!')
             await ws.send(json.dumps(regUser.inserted_id + ' was successfully registered!'))
         else:
             print(regData['uname'] + ' already exists in DB')
             await ws.send(json.dumps('A user with the username "'+ regData['uname'] + '" already exists'))
 
-    async def handleAuth(self, ws):
+    @classmethod
+    async def handleAuth(cls, ws):
         uname = json.loads(await ws.recv())
-        user = self.userCol.find_one({
+        user = cls.userCol.find_one({
             '_id': uname
         })
         if user != None:
             np.random.seed(user['seed'])
-            A = np.random.randint(low=0, high=self.q, size=(self.n, self.m))
+            A = np.random.randint(low=0, high=cls.q, size=(cls.n, cls.m))
             t = np.asarray(user['t'], dtype = int)
-            await ws.send(json.dumps(self.iterations))
+            await ws.send(json.dumps(cls.iterations))
             iteration = 1
             while True:
                 while True:
@@ -99,7 +102,7 @@ class Verifier:
                         z1 = np.asarray(opening['z1'], dtype = int)
                         z2 = np.asarray(opening['z2'], dtype = int)
                         print('Opening received')
-                        verified = self.verification(A=A, t=t, z1=z1, z2=z2, c=c, w=w)
+                        verified = cls.verification(A=A, t=t, z1=z1, z2=z2, c=c, w=w)
                         if not verified['result']:
                             print('Opening NOT accepted')
                             await ws.send(json.dumps('Authentication failed'))
@@ -110,15 +113,15 @@ class Verifier:
                 if iteration != opening['iteration']:
                     print('Iterations failed')
                     break
-                elif iteration == self.iterations:
+                elif iteration == cls.iterations:
                     print(iteration, ' iterations done')
-                    self.isIterated = True
-                    self.authenticated = True
+                    cls.isIterated = True
+                    cls.authenticated = True
                     break
                 print(iteration, ' iterations done')
                 iteration += 1
 
-            if self.authenticated and self.isIterated:
+            if cls.authenticated and cls.isIterated:
                 print('SUCCESS')
                 await ws.send('SUCCESS')
             else:
@@ -129,22 +132,23 @@ class Verifier:
             await ws.send(json.dumps(uname+' has not been registered'))
 
     #Trengs én handler per connection
-    async def handler(self, ws):
+    @classmethod
+    async def handler(cls, ws):
         while True:
             try:
                 action = json.loads(await ws.recv())
                 if action == 'R':
-                    await self.handleRegister(ws)
+                    await cls.handleRegister(ws)
                 else:
-                    await self.handleAuth(ws)
+                    await cls.handleAuth(ws)
                 
 
             except websockets.ConnectionClosedOK:
                 break
 
-                        
-    async def startServer(self):
-        async with websockets.serve(self.handler, "localhost", port=8765):
+    @classmethod                    
+    async def startServer(cls):
+        async with websockets.serve(cls.handler, "localhost", port=8765):
             await asyncio.Future() #server runs until manually stopped
 
 if __name__ == "__main__":
