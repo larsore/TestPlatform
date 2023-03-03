@@ -16,9 +16,10 @@ class Verifier:
 
     n = 1280
     m = 1690
-    q = 4002909139 # 32-bit prime
-    beta = 2
-    approxBetaInterval = np.arange(-2*beta, 2*beta+1)
+    q = 8380417 # 23-bit prime
+    eta = 5
+    gamma = 523776
+    approxBetaInterval = np.arange(-2*(gamma-eta), 2*(gamma-eta)+1)
 
     isIterated = False
     authenticated = False
@@ -101,6 +102,8 @@ class Verifier:
                     if opening != 'R':
                         z1 = np.asarray(opening['z1'], dtype = int)
                         z2 = np.asarray(opening['z2'], dtype = int)
+                        print(z1)
+                        print(z2)
                         print('Opening received')
                         verified = cls.verification(A=A, t=t, z1=z1, z2=z2, c=c, w=w)
                         if not verified['result']:

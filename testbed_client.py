@@ -13,10 +13,12 @@ class Prover:
 
     n = 1280
     m = 1690
-    q = 4002909139 # 32-bit prime
-    beta = 2
-    approxBetaInterval = np.arange(-2*beta, 2*beta+1)
-    M = 3
+    q = 8380417 #23-bit prime
+    eta = 5
+    gamma = 523776
+    #beta = 2
+    #approxBetaInterval = np.arange(-2*beta, 2*beta+1)
+    #M = 3
     
     paramPlotData = []
     timePlotData = []
@@ -25,33 +27,37 @@ class Prover:
     @classmethod
     def getPK(cls, username, secret):
         uhash = int(sha256(username.encode()).hexdigest()[:8], 16)
-        secretHash = int(sha256((username+secret).encode()).hexdigest()[:8], 16)
         np.random.seed(uhash)
         A = np.random.randint(low=0, high=cls.q, size=(cls.n, cls.m))
-        np.random.seed(secretHash)
-        s1 = np.random.randint(low=-cls.beta, high=cls.beta+1, size = cls.m)
-        s2 = np.random.randint(low=-cls.beta, high=cls.beta+1, size = cls.n)
-        t = (np.inner(A, s1) + s2)%cls.q
+        sk = cls.genSK(secret=secret)
+        t = (np.inner(A, sk['s1']) + sk['s2'])%cls.q
         return {
             'uhash': uhash,
-            'secretHash': secretHash,
             't': t
         } 
+
+    @classmethod
+    def genSK(cls, secret):
+        gen = np.random.default_rng(seed = [x for x in secret.encode()])
+        s1 = gen.integers(low=-cls.eta, high=cls.eta+1, size = cls.m)
+        s2 = gen.integers(low=-cls.eta, high=cls.eta+1, size = cls.n)
+        return {
+            's1': s1,
+            's2': s2
+        }
 
     @classmethod 
     def getCommitment(cls, A):
         np.random.seed(None)
-        y1 = np.random.randint(low=-cls.beta, high=cls.beta+1, size=cls.m) 
-        #y1 = np.asarray([1 for i in range(cls.m)])
+        y1 = np.random.randint(low=-cls.gamma, high=cls.gamma+1, size=cls.m) 
         np.random.seed(None)
-        y2 = np.random.randint(low=-cls.beta, high=cls.beta+1, size=cls.n)
-        #y2 = np.asarray([1 for i in range(cls.n)])
+        y2 = np.random.randint(low=-cls.gamma, high=cls.gamma+1, size=cls.n)
         w = sha256((((np.inner(A, y1) + y2)%cls.q).tobytes()))
         return {
             'y1': y1,
             'y2': y2,
             'w': w.hexdigest()
-        } 
+        }
 
     @staticmethod
     def getOpening(s1, s2, y1, y2, c):
@@ -72,23 +78,26 @@ class Prover:
             await ws.send(json.dumps('R'))
 
     @classmethod
-    def rejectionSampling(cls, z, v, dist):
+    def rejectionSampling(cls, z, beta):
         # Enkel beta-rejection som vi er usikre på om gjør z og s uavhengige
-        if np.all(np.isin(z, cls.approxBetaInterval)):
+        if np.all(np.isin(z, np.arange(-(cls.gamma - beta), (cls.gamma - beta)))):
             return True
         return False
-        
-        # Rejsection sampling ut ifra en Gauss fordeling
+        # Rejection sampling ut ifra en Gauss fordeling
         """np.random.seed(None)
         u = np.random.rand()
         cond = (1/cls.M)*np.exp((-2*(np.inner(z, v)) + np.linalg.norm(v)**2)/(2*dist**2))
         if (u > cond):
             return False
         return True"""
+
+    @classmethod
+    async def negotiate(cls):
+        async with websockets.connect(cls.serverURL) as ws:
+            await ws.send()
     
     @classmethod
     async def authenticate(cls, username, secret):
-
         async with websockets.connect(cls.serverURL) as websocket:
             # Let server know that you are going to authenticate
             await websocket.send(json.dumps('A'))
@@ -96,25 +105,30 @@ class Prover:
             pk = cls.getPK(username=username, secret=secret)
             np.random.seed(pk['uhash'])
             A = np.random.randint(low=0, high=cls.q, size=(cls.n, cls.m))
-            np.random.seed(pk['secretHash'])
-            s1 = np.random.randint(low=-cls.beta, high=cls.beta+1, size = cls.m)
-            s2 = np.random.randint(low=-cls.beta, high=cls.beta+1, size = cls.n)        
+            sk = cls.genSK(secret=secret)      
             iterations = json.loads(await websocket.recv()) #Integritetssjekk på dette for å forsikre at en MitM ikke har endret verdien
             if not isinstance(iterations, str):
+                counter = 0
+                a = 0
                 for i in range(1, iterations+1):
                     while True:
+                        counter += 1
                         commitment = cls.getCommitment(A=A)
                         await websocket.send(commitment['w'])
                         print('Commitment w =', commitment['w'], 'sent')
                         c = json.loads(await websocket.recv())
                         print('Challenge c =', c, 'received')
                         if not isinstance(c, str):
-                            opening = cls.getOpening(s1, s2, commitment['y1'], commitment['y2'], c)
-                            checkZ1 = cls.rejectionSampling(opening['z1'], c*s1, 0.675*np.linalg.norm(c*s1))
-                            checkZ2 = cls.rejectionSampling(opening['z2'], c*s2, 0.675*np.linalg.norm(c*s2))
+                            opening = cls.getOpening(sk['s1'], sk['s2'], commitment['y1'], commitment['y2'], c)
+                            checkZ1 = cls.rejectionSampling(opening['z1'], beta=cls.eta)
+                            checkZ2 = cls.rejectionSampling(opening['z2'], beta=cls.eta)
                             if checkZ1 and checkZ2:
+                                a += 1
                                 print('Accepted!')
                                 await cls.sendOpening(websocket, iteration=i, opening=[opening['z1'], opening['z2']])
+                                print(opening['z1'])
+                                print(opening['z2'])
+                                print()
                                 print('Opening sent')
                                 break
                             await cls.sendOpening(websocket)
@@ -124,8 +138,8 @@ class Prover:
                     print(i, ' openings sent')
                 result = await websocket.recv()
                 print(result)
-                if result == 'FAIL':
-                    print('Iteration no.', cls.testIteration, 'failed')                   
+                print(a/counter)
+                                 
             else:
                 print(iterations)
 
@@ -145,21 +159,12 @@ class Prover:
             }))
             print(json.loads(await websocket.recv()))
 
-    @classmethod
-    async def testProtocol(cls, r):
-        for val in r:
-            cls.beta = val
-            print(cls.q)
-            start = time.time()
-            await cls.runProtocol()
-            stop = time.time()
-            cls.paramPlotData.append(val)
-            cls.timePlotData.append((stop-start))
-            cls.testIteration += 1
+   
 
 if __name__ == "__main__":
         
     prover = Prover()
+    #prover.negotiate()
 
     while True:
         print('Press [1] to login.\nPress [2] to register')
