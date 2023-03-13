@@ -36,6 +36,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         
     def do_POST(self):
+        #Credential creation #TODO dummy data, returner riktige data
+        challenge = 5 #TODO kan ikke settes her, må sikre at challenge er fixed mellom første og andre POST request i registrering. 
         #Registrering
         if self.path == '/register':
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
@@ -63,8 +65,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     }
                     userColumn.insert_one(doc)
 
-                    #Credential creation #TODO dummy data, returner riktige data
-                    challenge = np.random.randint(0,1000)
+                   
 
                     cred = {
                         "publicKey": {
@@ -110,16 +111,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
 
-                rpID = 1 #TODO rpID == "nettside.no", må konverteres før konkatenering med challenge og hashing. 
-                if request.httpOrigin == rpID:
-                    if request.get("client_data") == sha256(rpID+challenge):
-                        doc = {
-                        '_id': username,
-                        'credentialID': request.get("credential_id"),
-                        'publicKey': request.get("public_key")
-                        } 
-                        userColumn.insert_one(doc) #TODO lars: lagre på riktig plass i DB. Usikker på formatering av non-SQL DB
-
+                rpID = 1 #TODO skal være en nettside
+                #if request.httpOrigin == rpID: #TODO finn en måte å hente ut origin fra http request på
+                if request.get("client_data") == sha256(str(rpID+challenge).encode()).hexdigest():
+                    doc = {
+                    '_id': username, #TODO må lagres globalt for å hente ut til verifikasjon
+                    'credentialID': request.get("credential_id"),
+                    'publicKey': request.get("public_key")
+                    } 
+                    userColumn.insert_one(doc) #TODO lars: lagre på riktig plass i DB. Usikker på formatering av non-SQL DB
+                else:
+                    print(sha256(str(rpID+challenge).encode()).hexdigest())
+                    return self.wfile.write(b'Verifikasjon feilet. ClientData er ikke korrekt')
 
                 
 
@@ -144,6 +147,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 authRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 username = authRequest.get("username")
                 checkUserExistence = userColumn.find_one({'_id': username})
+                
 
                 if checkUserExistence == None: #No instance of that username in database
                     return self.wfile.write(b"No user with the username '%s' exists" % username.encode())
