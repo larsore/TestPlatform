@@ -8,6 +8,9 @@ import numpy as np
 import secrets
 from routes import routes
 import pymongo
+from hashlib import sha256
+
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
@@ -15,6 +18,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(request, client_address, server)
 
     #TODO lag truly random challenge
+    #TODO funksjoner definert utenfor do_GET/do_POST kan ikke brukes i do_GET/do_POST..
+   
     def challenge(self):
         challenge = np.random.randint(0,1000)
         return challenge
@@ -60,7 +65,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                     #Credential creation #TODO dummy data, returner riktige data
                     challenge = np.random.randint(0,1000)
-                    print("challenge:", challenge)
+
                     cred = {
                         "publicKey": {
                             "attestation": "none",
@@ -84,7 +89,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             "timeout": 30000,
                             "user": {
                                 "displayName": username,
-                                "id": "bz9ZDfHzOBLycqISTAdWwWIZt8VO-6mT3hBNXS5jwmY=" #TODO fiks brukerID
+                                "id": username
                             }
                         }
                     }
@@ -93,7 +98,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(409, "Username taken")
                     #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
                     return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
-            
+       
+        elif self.path == "/register/verification": #siste sted i registreringsprosessen
+            self.data_string = self.rfile.read(int(self.headers['Content-Length']))
+            if self.data_string == b'': #Hvis body er tom, return 400 bad request
+                return self.send_error(400, "Bad request")
+            else:
+                self.send_response(HTTPStatus.OK)
+                request = json.loads(self.data_string.decode('utf8').replace("'", '"'))
+                print(request)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+
+                rpID = 1 #TODO rpID == "nettside.no", må konverteres før konkatenering med challenge og hashing. 
+                if request.httpOrigin == rpID:
+                    if request.get("client_data") == sha256(rpID+challenge):
+                        doc = {
+                        '_id': username,
+                        'credentialID': request.get("credential_id"),
+                        'publicKey': request.get("public_key")
+                        } 
+                        userColumn.insert_one(doc) #TODO lars: lagre på riktig plass i DB. Usikker på formatering av non-SQL DB
+
+
+                
+
+
+            return
+
         
         #Autentisering
         elif self.path == '/auth':
