@@ -14,6 +14,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, request: bytes, client_address: Tuple[str, int], server: socketserver.BaseServer):
         super().__init__(request, client_address, server)
 
+    #TODO lag truly random challenge
     def challenge(self):
         challenge = np.random.randint(0,1000)
         return challenge
@@ -32,38 +33,67 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         #Registrering
         if self.path == '/register':
-            self.send_response(HTTPStatus.OK)
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
-            registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
-            print(registerRequest)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-
-            dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
-            db = dbClient['FIDOServer']
-            userColumn = db['Users']
-
-            username = registerRequest.get("username")
-            authenticatorNickname = registerRequest.get("authenticator_nickname")
-            checkUserExistence = userColumn.find_one({'_id': username})
-
-            if checkUserExistence == None: #No instance of that username in database
-                doc = {
-                    '_id': username,
-                    'authenticator_nickname': authenticatorNickname
-                }
-                regUser = userColumn.insert_one(doc)
-                challenge = challenge()
-                rpID = self.rpID
-                return self.wfile.write(b"Du er naa registrert med brukernavn '%s'" % regUser.inserted_id.encode()) #TODO fjern dette når credential er ferdig laget og returnert
-            
-                
-                #TODO lag challenge, credID
-                #TODO returner challenge, credID og rpID
+            if self.data_string == b'': #Hvis body er tom, return 400 bad request
+                return self.send_error(400, "Bad request")
             else:
-                #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
-                return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
-        
+                self.send_response(HTTPStatus.OK)
+                registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
+                print(registerRequest)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+
+                dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
+                db = dbClient['FIDOServer']
+                userColumn = db['Users']
+
+                username = registerRequest.get("username")
+                authenticatorNickname = registerRequest.get("authenticator_nickname")
+                checkUserExistence = userColumn.find_one({'_id': username})
+
+                if checkUserExistence == None: #No instance of that username in database
+                    doc = {
+                        '_id': username,
+                        'authenticator_nickname': authenticatorNickname
+                    }
+                    userColumn.insert_one(doc)
+
+                    #Credential creation #TODO dummy data, returner riktige data
+                    challenge = np.random.randint(0,1000)
+                    print("challenge:", challenge)
+                    cred = {
+                        "publicKey": {
+                            "attestation": "none",
+                            "authenticatorSelection": {
+                                "authenticatorAttachment": "platform",
+                                "requireResidentKey": True,
+                                "userVerification": "required"
+                            },
+                            "challenge": challenge, #TODO truly random challenge
+                            "excludeCredentials": [],
+                            "pubKeyCredParams": [
+                                {
+                                    "alg": "baby-dilithium",
+                                    "type": "public-key"
+                                }
+                            ],
+                            "rp": {
+                                "id": "masterthesis.com", #TODO må være samme som http origin
+                                "name": "Master Thesis"
+                            },
+                            "timeout": 30000,
+                            "user": {
+                                "displayName": username,
+                                "id": "bz9ZDfHzOBLycqISTAdWwWIZt8VO-6mT3hBNXS5jwmY=" #TODO fiks brukerID
+                            }
+                        }
+                    }
+                    return self.wfile.write(json.dumps(cred).encode())
+                else:
+                    self.send_error(409, "Username taken")
+                    #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
+                    return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
+            
         
         #Autentisering
         elif self.path == '/auth':
@@ -72,8 +102,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
 
-            if self.data_string == "": #TODO check if request is malformed
-                self.send_response(HTTPStatus.BAD_REQUEST)
+            if self.data_string == b'': 
+                self.send_error(400, "Bad Request")
             else:
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
