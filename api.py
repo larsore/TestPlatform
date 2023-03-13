@@ -38,6 +38,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         #Credential creation #TODO dummy data, returner riktige data
         challenge = 5 #TODO kan ikke settes her, må sikre at challenge er fixed mellom første og andre POST request i registrering. 
+        rpID = 1 #TODO skal være en nettside
         #Registrering
         if self.path == '/register':
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
@@ -111,7 +112,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
 
-                rpID = 1 #TODO skal være en nettside
+                
                 #if request.httpOrigin == rpID: #TODO finn en måte å hente ut origin fra http request på
                 if request.get("client_data") == sha256(str(rpID+challenge).encode()).hexdigest():
                     doc = {
@@ -123,10 +124,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 else:
                     print(sha256(str(rpID+challenge).encode()).hexdigest())
                     return self.wfile.write(b'Verifikasjon feilet. ClientData er ikke korrekt')
-
-                
-
-
             return
 
         
@@ -152,7 +149,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if checkUserExistence == None: #No instance of that username in database
                     return self.wfile.write(b"No user with the username '%s' exists" % username.encode())
                 else:
-                    return self.wfile.write(b'Her kommer rpID, credID og challenge')  #TODO return rdID, credID,challenge. CredID ligger i database sammen med brukernavn, ble laget under registrering. 
+                    userData = userColumn.find_one(username)
+                    print(userData)
+                    print(type(userData))
+                    challenge = np.random.randint(0,1000) #TODO generate challenge
+
+                    authResponse = {
+                        "rpID":rpID,
+                        "credential_ID": "credID",#userData["credentialID"], #TODO denne er ikke lagret i database enda, må gjøres ved registrering
+                        "challenge": challenge   
+                  }
+                    return self.wfile.write(json.dumps(authResponse).encode())
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
        
