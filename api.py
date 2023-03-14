@@ -26,7 +26,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def challenge(self):
         challenge = np.random.randint(0,1000)
         return challenge
+
+    def startDatabase(self):
+        dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
+        db = dbClient['FIDOServer']
+        userCollection = db['Users']
+        return dbClient, db, userCollection
     
+
+
     @classmethod
     def setUsername(cls, username):
         cls.username = username
@@ -70,16 +78,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(HTTPStatus.OK)
                 #registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 print(registerRequest)
+               
                 self.send_header("Content-type", "application/json") #TODO sende host her? sjekk hvilke headers som er mulige å sende
                 self.end_headers()
 
+                dbClient, db, userCollection = self.startDatabase()
+                """
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
                 userCollection = db['Users']
+                """
 
                 challenge = self.challenge() 
                 self.setChallenge(challenge=challenge)
-
                 self.expectedClientAddress = self.client_address[0] 
                 username = registerRequest.get("username") #avhengig av at kun én pers registrerer seg og verfifiserer seg om gangen. #TODO se på alternativ løsning
                 self.setUsername(username=username)
@@ -121,6 +132,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             }
                         }
                     }
+                    print("hash:", sha256(str(rpID+self.getChallenge()).encode()).hexdigest())
                     return self.wfile.write(json.dumps(cred).encode()) #TODO sende host slik at client kan sjekke host==rpID
                 else:
                     self.send_error(409, "Username taken")
@@ -137,9 +149,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
 
+
+                dbClient, db, userCollection = self.startDatabase()
+
+                """
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
                 userCollection = db['Users']
+                """
 
                 challenge = self.getChallenge()
 
@@ -162,8 +179,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     """#TODO finn ut om det er mulig å legge inn flere fields samtidig i collection
                     print("self.username:",username)
 
-                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id")}})
-                    userCollection.find_one_and_update({"_id": username}, {"$set": {"public_key": request.get("public_key")}})
+                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id"), "public_key": request.get("public_key")}})
 
                     cursor = userCollection.find({"_id":username})
                     for document in cursor:
