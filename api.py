@@ -21,8 +21,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
     #TODO lag truly random challenge
-    #TODO funksjoner definert utenfor do_GET/do_POST kan ikke brukes i do_GET/do_POST..
-   
     def challenge(self):
         challenge = np.random.randint(0,1000)
         return challenge
@@ -33,8 +31,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         userCollection = db['Users']
         return dbClient, db, userCollection
     
-
-
     @classmethod
     def setUsername(cls, username):
         cls.username = username
@@ -64,9 +60,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         
     def do_POST(self):
-        #Credential creation #TODO dummy data, returner riktige data
-        
-        rpID = 1 #TODO skal være en nettside
+       
+        rpID = 1 #TODO skal være en url?
 
         #Registrering
         if self.path == '/register':
@@ -83,12 +78,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
 
                 dbClient, db, userCollection = self.startDatabase()
-                """
-                dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
-                db = dbClient['FIDOServer']
-                userCollection = db['Users']
-                """
-
+              
                 challenge = self.challenge() 
                 self.setChallenge(challenge=challenge)
                 self.expectedClientAddress = self.client_address[0] 
@@ -98,7 +88,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 authenticatorNickname = registerRequest.get("authenticator_nickname")
                 checkUserExistence = userCollection.find_one({'_id': username})
                 
-
                 if checkUserExistence == None: #No instance of that username in database
                     doc = {
                         '_id': username,
@@ -191,9 +180,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     print(sha256(str(rpID+self.getChallenge()).encode()).hexdigest())
                     print(verifyClientAddress,verifyClientData,verifyPublicKey)
                     return self.wfile.write(b'Verifikasjon feilet. ClientData er ikke korrekt')
-            return
 
-        
+
         #Autentisering
         elif self.path == '/auth':
             self.send_response(HTTPStatus.OK)
@@ -220,15 +208,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                     authResponse = {
                         "rpID": rpID,
-                        "credential_ID": "credID",#userData["credentialID"], #TODO denne er ikke lagret i database enda, må gjøres ved registrering
+                        "credential_ID": userData["credentialID"], #TODO denne er ikke lagret i database enda, må gjøres ved registrering
                         "challenge": challenge   
-                  }
+                    }     
                     return self.wfile.write(json.dumps(authResponse).encode())
                     
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
        
-
 if __name__ == "__main__":
     PORT = 8000
     hostname = socket.gethostname()
