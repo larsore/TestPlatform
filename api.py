@@ -14,11 +14,11 @@ from hashlib import sha256
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
-    username = ""
-    expectedClientAddress = ""
-
+    username = None
     def __init__(self, request: bytes, client_address: Tuple[str, int], server: socketserver.BaseServer):
         super().__init__(request, client_address, server)
+       
+
 
     #TODO lag truly random challenge
     #TODO funksjoner definert utenfor do_GET/do_POST kan ikke brukes i do_GET/do_POST..
@@ -27,7 +27,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         challenge = np.random.randint(0,1000)
         return challenge
     
+    @classmethod
+    def setUsername(cls, username):
+        cls.username = username
 
+    @classmethod
+    def getUsername(cls):
+        return cls.username
+    
+    @classmethod
+    def setChallenge(cls, challenge):
+        cls.challenge = challenge
+
+    @classmethod
+    def getChallenge(cls):
+        return cls.challenge
+    
    
     def do_GET(self):
         self.send_response(HTTPStatus.OK)
@@ -42,12 +57,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         
     def do_POST(self):
         #Credential creation #TODO dummy data, returner riktige data
-        challenge = 5 #TODO kan ikke settes her, må sikre at challenge er fixed mellom første og andre POST request i registrering. 
+        
         rpID = 1 #TODO skal være en nettside
+
         #Registrering
         if self.path == '/register':
             registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            self.expectedClientAddress = self.client_address[1] #setter denne til PORT her, ettersom ip er localhost. Ved prod. må det endres til IP/URL
             #self.data_string = self.rfile.read(int(self.headers['Content-Length']))
             if registerRequest == b'': #Hvis body er tom, return 400 bad request
                 return self.send_error(400, "Bad request")
@@ -55,23 +70,30 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(HTTPStatus.OK)
                 #registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 print(registerRequest)
-                self.send_header("Content-type", "application/json")
+                self.send_header("Content-type", "application/json") #TODO sende host her? sjekk hvilke headers som er mulige å sende
                 self.end_headers()
 
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
-                userColumn = db['Users']
+                userCollection = db['Users']
 
-                self.username = registerRequest.get("username") #avhengig av at kun én pers registrerer seg og verfifiserer seg om gangen. #TODO se på alternativ løsning
+                challenge = self.challenge() 
+                self.setChallenge(challenge=challenge)
+
+                self.expectedClientAddress = self.client_address[0] 
+                username = registerRequest.get("username") #avhengig av at kun én pers registrerer seg og verfifiserer seg om gangen. #TODO se på alternativ løsning
+                self.setUsername(username=username)
+
                 authenticatorNickname = registerRequest.get("authenticator_nickname")
-                checkUserExistence = userColumn.find_one({'_id': self.username})
+                checkUserExistence = userCollection.find_one({'_id': username})
+                
 
                 if checkUserExistence == None: #No instance of that username in database
                     doc = {
-                        '_id': self.username,
+                        '_id': username,
                         'authenticator_nickname': authenticatorNickname
                     }
-                    userColumn.insert_one(doc)
+                    userCollection.insert_one(doc)
                     cred = {
                         "publicKey": {
                             "attestation": "none",
@@ -94,13 +116,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             },
                             "timeout": 30000,
                             "user": {
-                                "displayName": self.username,
-                                "id": self.username
+                                "displayName": username,
+                                "id": username
                             }
                         }
                     }
-                    print("client address:",self.client_address)
-                    return self.wfile.write(json.dumps(cred).encode())
+                    return self.wfile.write(json.dumps(cred).encode()) #TODO sende host slik at client kan sjekke host==rpID
                 else:
                     self.send_error(409, "Username taken")
                     #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
@@ -118,20 +139,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
-                userColumn = db['Users']
+                userCollection = db['Users']
 
-                if self.client_address[1] == self.expectedClientAddress: #TODO finn en måte å hente ut origin fra http request på
-                    if request.get("client_data") == sha256(str(rpID+challenge).encode()).hexdigest():
-                        if "public_key" in request:
-                            doc = {
-                            '_id': self.username, #TODO krever at kun én bruker registrerer seg og verifiserer seg om gangen. Håndterer ikke flere samtidig
-                            'credentialID': request.get("credential_id"),
-                            'publicKey': request.get("public_key")
-                            } 
-                            userColumn.insert_one(doc) #TODO lars: lagre på riktig plass i DB. Usikker på formatering av non-SQL DB
-                            return self.wfile.write(b'Verifikasjon OK. Du kan naa logge inn')
+                challenge = self.getChallenge()
+
+                verifyClientAddress = self.client_address[0] == "192.168.0.44" or self.client_address[0] == "127.0.0.1"
+                verifyClientData = request.get("client_data") == sha256(str(rpID+challenge).encode()).hexdigest()
+                verifyPublicKey = "public_key" in request
+
+                
+
+                print("actual client address:",self.client_address[0])
+
+                if verifyClientAddress and verifyClientData and verifyPublicKey: #self.expectedClientAddress: #TODO finn en måte å hente ut origin fra http request på
+                    username = self.getUsername()
+                    """
+                    doc = {
+                    '_id': username, #TODO krever at kun én bruker registrerer seg og verifiserer seg om gangen. Håndterer ikke flere samtidig
+                    'credentialID': request.get("credential_id"),
+                    'publicKey': request.get("public_key")
+                    } 
+                    """#TODO finn ut om det er mulig å legge inn flere fields samtidig i collection
+                    print("self.username:",username)
+
+                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id")}})
+                    userCollection.find_one_and_update({"_id": username}, {"$set": {"public_key": request.get("public_key")}})
+
+                    cursor = userCollection.find({"_id":username})
+                    for document in cursor:
+                        print(document)
+
+                    print(verifyClientAddress,verifyClientData,verifyPublicKey)
+                    return self.wfile.write(b'Verifikasjon OK. Du kan naa logge inn')
                 else:
-                    print(sha256(str(rpID+challenge).encode()).hexdigest())
+                    print(sha256(str(rpID+self.getChallenge()).encode()).hexdigest())
+                    print(verifyClientAddress,verifyClientData,verifyPublicKey)
                     return self.wfile.write(b'Verifikasjon feilet. ClientData er ikke korrekt')
             return
 
@@ -148,18 +190,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             else:
                 dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
                 db = dbClient['FIDOServer']
-                userColumn = db['Users']
+                userCollection = db['Users']
 
                 authRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 username = authRequest.get("username")
-                checkUserExistence = userColumn.find_one({'_id': username})
+                checkUserExistence = userCollection.find_one({'_id': username})
                 
                 if checkUserExistence == None: #No instance of that username in database
                     return self.wfile.write(b"No user with the username '%s' exists" % username.encode())
                 else:
-                    userData = userColumn.find_one(username)
-                    print(userData)
-                    print(type(userData))
+                    userData = userCollection.find_one(username)
                     challenge = np.random.randint(0,1000) #TODO generate truly random challenge
 
                     authResponse = {

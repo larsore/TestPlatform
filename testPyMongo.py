@@ -6,12 +6,15 @@ testplatformDB = myclient["FIDOServer"]
 
 userCollection = testplatformDB['Users']
 
-userCollection.delete_many({})
-"""
-col_list = testplatformDB.list_collection_names()
-print ("collections on the unwanted db:", col_list)
-myclient.drop_database('Users')
-"""
+#userCollection.delete_many({})
+
+cursor = userCollection.find({})
+for document in cursor:
+    print(document)
 
 
-    
+#userCollection.find_one_and_update({"_id": "vegard"}, {"$set": {"public_key": "abc"}})
+
+"""cursor = userCollection.find({})
+for document in cursor:
+    print(document)"""
