@@ -178,9 +178,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     'credentialID': request.get("credential_id"),
                     'publicKey': request.get("public_key")
                     } 
-                    """#TODO finn ut om det er mulig å legge inn flere fields samtidig i collection
+                    """
 
-                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id"), "public_key": request.get("public_key")}})
+                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id"), "public_key": request.get("public_key")}}) #TODO lag doc med felter som skal oppdateres og legg inn doc i DB
+
+                    self.setChallenge(-1) #For at man ikke skal kunne gjennbruke en clientData-hash og dermed endre public key som allerede er satt
 
                     cursor = userCollection.find({"_id":username})
                     for document in cursor:
@@ -203,16 +205,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.data_string = self.rfile.read(int(self.headers['Content-Length']))
+            authRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            #self.data_string = self.rfile.read(int(self.headers['Content-Length']))
 
-            if self.data_string == b'': 
+            if authRequest == b'': 
                 self.send_error(400, "Bad Request")
             else:
-                dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
-                db = dbClient['FIDOServer']
-                userCollection = db['Users']
+                dbClient, db, userCollection = self.startDatabase()
 
-                authRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 username = authRequest.get("username")
                 checkUserExistence = userCollection.find_one({'_id': username})
                 
@@ -220,15 +220,48 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return self.wfile.write(b"No user with the username '%s' exists" % username.encode())
                 else:
                     userData = userCollection.find_one(username)
-                    challenge = np.random.randint(0,1000) #TODO generate truly random challenge
+                    challenge = self.createChallenge() 
+                    self.setChallenge(challenge)
+                    self.setUsername(username)
 
+                    credentialID = userData["credential_id"]
                     authResponse = {
                         "rpID": self.rpID,
-                        "credential_ID": userData["credentialID"], #TODO denne er ikke lagret i database enda, må gjøres ved registrering
-                        "challenge": challenge   
+                        "credential_id": credentialID , #TODO denne er ikke lagret i database enda, må gjøres ved registrering
+                        "challenge": challenge 
                     }     
                     return self.wfile.write(json.dumps(authResponse).encode())
-                    
+                
+        elif self.path == "/auth/verification":
+            request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            if request == b'': #Hvis body er tom, return 400 bad request
+                return self.send_error(400, "Bad request")
+            
+            keys = ["client_data", "authenticator_data", "signature"]
+            for key in keys:
+                if key not in request:
+                    return self.send_error(400, "Bad request")
+            else:
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+
+                
+                verifyClientData = sha256(request.get("client_data").encode()).hexdigest() == sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest()
+                verifyAuthenticatorData = request.get("authenticator_data") == sha256(self.rpID.encode()).hexdigest()
+                verifySignature = verifySignature(request.get("signature"))
+                
+                dbClient, db, userCollection = self.startDatabase()
+
+                if verifyClientData and verifyAuthenticatorData and verifySignature:
+                    return self.wfile.write(b'SUCCESS! You are now logged in as user %s' % self.getUsername())
+                else:
+                    verificationResponse = {
+                        "client_data": verifyClientData,
+                        "authenticator_data": verifyAuthenticatorData, #TODO denne er ikke lagret i database enda, må gjøres ved registrering
+                        "signature": verifySignature 
+                    }     
+                    return self.wfile.write(b'Verification failed %s' % json.dumps(verificationResponse).encode())
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
        
