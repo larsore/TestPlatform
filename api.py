@@ -223,7 +223,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             authRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             requiredKeys = ["username"]
             checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,authRequest)
-            print(checkRequiredKeys)
+            
             if not checkRequiredKeys:
                 return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
             else:    
@@ -270,6 +270,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             userCollection = self.startDatabase()
 
             if verifyClientData and verifyAuthenticatorData and verifySignature:
+                self.send_response(200, "Verification successful")
                 return self.wfile.write(b'SUCCESS! You are now logged in as user %s' % self.getUsername())
             else:
                 verificationResponse = {
