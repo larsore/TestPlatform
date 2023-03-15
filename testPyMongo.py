@@ -13,8 +13,6 @@ for document in cursor:
     print(document)
 
 
-#userCollection.find_one_and_update({"_id": "vegard"}, {"$set": {"public_key": "abc"}})
-
 """cursor = userCollection.find({})
 for document in cursor:
     print(document)"""

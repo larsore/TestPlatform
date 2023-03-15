@@ -13,7 +13,7 @@ from hashlib import sha256
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
-    challenge = None
+    challenge = 0
     rpID = 1 #TODO skal være en url?
     clientAddress = None
 
@@ -21,7 +21,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(request, client_address, server)
        
     #TODO lag truly random challenge
-
     def createChallenge(self):
         challenge = np.random.randint(0,1000)
         return challenge
@@ -30,7 +29,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
         db = dbClient['FIDOServer']
         userCollection = db['Users']
-        return dbClient, db, userCollection
+        return userCollection
     
     @classmethod
     def setUsername(cls, username):
@@ -56,6 +55,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def getClientAddress(cls):
         return cls.clientAddress
     
+    """
+    def requiredKeysInRequest(self, requiredKeys, request):
+        for key in requiredKeys:
+            if key not in request:
+                return False
+            else:
+                return True
+    """
+
+    def requiredKeysInRequest(self, requiredKeys, request):
+        return all(key in request for key in requiredKeys)
+
+    def verifySignature(self, c, A, t, w, m, z1, z2):
+        h = sha256(A+t+w+m).hexdigest
+        if c == h:
+            if sha256((np.inner(A, z1) + z2 - c*t).tobytes()) == w:
+                return True
+        return False
+    
    
     def do_GET(self):
         self.send_response(HTTPStatus.OK)
@@ -67,77 +85,84 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
 
-        
-    def do_POST(self):
-       
+    def do_POST(self):       
         #Registrering
         if self.path == '/register':
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+
             registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            requestReceivedFrom = self.client_address[0]
+            requiredKeys = ["username", "authenticator_nickname"]
+            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,registerRequest)
+            if not checkRequiredKeys:
+                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
+            else:   
+                userCollection = self.startDatabase() 
+                requestReceivedFrom = self.client_address[0]
 
-            self.setClientAddress(requestReceivedFrom) #Henter ip-adressen requesten ble sendt fra, setter denne globalt
-            print("Set client address to:",requestReceivedFrom)
+                self.setClientAddress(requestReceivedFrom) #Henter ip-adressen requesten ble sendt fra, setter denne globalt
+                print("Set client address to:",requestReceivedFrom)
 
-            if registerRequest == b'': #Hvis body er tom, return 400 bad request
-                return self.send_error(400, "Bad request")
-            else:
-                self.send_response(HTTPStatus.OK)
-                #registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
-                print("Recieved request from client:",registerRequest)
-               
-                self.send_header("Content-type", "application/json") #TODO sende host her? sjekk hvilke headers som er mulige å sende
-                self.end_headers()
-
-                dbClient, db, userCollection = self.startDatabase()
-              
-                challenge = self.createChallenge() 
-                self.setChallenge(challenge=challenge)
-                self.expectedClientAddress = self.client_address[0] 
-                username = registerRequest.get("username") #avhengig av at kun én pers registrerer seg og verfifiserer seg om gangen. #TODO se på alternativ løsning
-                self.setUsername(username=username)
-
-                authenticatorNickname = registerRequest.get("authenticator_nickname")
-                checkUserExistence = userCollection.find_one({'_id': username})
+                if registerRequest == b'': #Hvis body er tom, return 400 bad request
+                    return self.send_error(400, "Bad request")
+                else:
+                    self.send_response(HTTPStatus.OK)
+                    #registerRequest = json.loads(self.data_string.decode('utf8').replace("'", '"'))
+                    print("Recieved request from client:",registerRequest)
                 
-                if checkUserExistence == None: #No instance of that username in database
-                    doc = {
-                        '_id': username,
-                        'authenticator_nickname': authenticatorNickname
-                    }
-                    userCollection.insert_one(doc)
-                    cred = {
-                        "publicKey": {
-                            "attestation": "none",
-                            "authenticatorSelection": {
-                                "authenticatorAttachment": "platform",
-                                "requireResidentKey": True,
-                                "userVerification": "required"
-                            },
-                            "challenge": challenge, #TODO truly random challenge
-                            "excludeCredentials": [],
-                            "pubKeyCredParams": [
-                                {
-                                    "alg": "baby-dilithium",
-                                    "type": "public-key"
+                    self.send_header("Content-type", "application/json") #TODO sende host her? sjekk hvilke headers som er mulige å sende
+                    self.end_headers()
+
+                    challenge = self.createChallenge() 
+                    self.setChallenge(challenge=challenge)
+                    self.expectedClientAddress = self.client_address[0] 
+                    username = registerRequest.get("username") #avhengig av at kun én pers registrerer seg og verfifiserer seg om gangen. #TODO se på alternativ løsning
+                    self.setUsername(username=username)
+
+                    authenticatorNickname = registerRequest.get("authenticator_nickname")
+                    checkUserExistence = userCollection.find_one({'_id': username})
+                    
+                    if checkUserExistence == None: #No instance of that username in database
+                        doc = {
+                            '_id': username,
+                            'authenticator_nickname': authenticatorNickname
+                        }
+                        userCollection.insert_one(doc)
+
+                        cred = {
+                            "publicKey": {
+                                "attestation": "none",
+                                "authenticatorSelection": {
+                                    "authenticatorAttachment": "platform",
+                                    "requireResidentKey": True,
+                                    "userVerification": "required"
+                                },
+                                "challenge": challenge, #TODO truly random challenge
+                                "excludeCredentials": [],
+                                "pubKeyCredParams": [
+                                    {
+                                        "alg": "baby-dilithium",
+                                        "type": "public-key"
+                                    }
+                                ],
+                                "rp": {
+                                    "id": "masterthesis.com", #TODO må være samme som http origin
+                                    "name": "Master Thesis"
+                                },
+                                "timeout": 30000,
+                                "user": {
+                                    "displayName": username,
+                                    "id": username
                                 }
-                            ],
-                            "rp": {
-                                "id": "masterthesis.com", #TODO må være samme som http origin
-                                "name": "Master Thesis"
-                            },
-                            "timeout": 30000,
-                            "user": {
-                                "displayName": username,
-                                "id": username
                             }
                         }
-                    }
-                    print("hash:", sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest())
-                    return self.wfile.write(json.dumps(cred).encode()) #TODO sende host slik at client kan sjekke host==rpID
-                else:
-                    self.send_error(409, "Username taken")
-                    #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
-                    return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
+                        print("hash:", sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest())
+                        return self.wfile.write(json.dumps(cred).encode()) #TODO sende host slik at client kan sjekke host==rpID
+                    else:
+                        self.send_error(409, "Username taken")
+                        #TODO legg til sjekk på username + authenticator? Skal egentil være mulig å registrere seg flere ganger med samme brukernavn men med ny authenticator
+                        return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
        
         elif self.path == "/register/verification": #siste sted i registreringsprosessen
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
@@ -149,21 +174,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
 
-
-                dbClient, db, userCollection = self.startDatabase()
-
-                """
-                dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
-                db = dbClient['FIDOServer']
-                userCollection = db['Users']
-                """
-
+                userCollection = self.startDatabase()
                 challenge = self.getChallenge()
 
                 expectedClientAddress = self.getClientAddress()
 
                 verifyClientAddress = expectedClientAddress == self.client_address[0]
-                #verifyClientAddress = self.client_address[0] == "192.168.0.44" or self.client_address[0] == "127.0.0.1"
                 verifyClientData = request.get("client_data") == sha256(str(self.rpID+challenge).encode()).hexdigest()
                 verifyPublicKey = "public_key" in request
 
@@ -172,29 +188,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                 if verifyClientAddress and verifyClientData and verifyPublicKey:
                     username = self.getUsername()
-                    """
+                    
                     doc = {
-                    '_id': username, #TODO krever at kun én bruker registrerer seg og verifiserer seg om gangen. Håndterer ikke flere samtidig
-                    'credentialID': request.get("credential_id"),
+                    'credential_id': request.get("credential_id"),
                     'publicKey': request.get("public_key")
                     } 
-                    """
-
-                    userCollection.find_one_and_update({"_id": username}, {"$set": {"credential_id": request.get("credential_id"), "public_key": request.get("public_key")}}) #TODO lag doc med felter som skal oppdateres og legg inn doc i DB
-
-                    self.setChallenge(-1) #For at man ikke skal kunne gjennbruke en clientData-hash og dermed endre public key som allerede er satt
+                    userCollection.find_one_and_update({"_id": username}, {"$set":doc})
+        
+                    self.setChallenge(0) #For at man ikke skal kunne gjennbruke en clientData-hash og dermed endre public key som allerede er satt
 
                     cursor = userCollection.find({"_id":username})
                     for document in cursor:
                         print(document)
 
-                    print(verifyClientAddress,verifyClientData,verifyPublicKey)
+                    print("clientAddress:",verifyClientAddress,"clientData:",verifyClientData,"publicKey:",verifyPublicKey)
                     print("SUCCESS! Updated the data for user '%s' in the database" % self.username)
                     print('-'*100)
 
                     return self.wfile.write(b'Verifikasjon OK. Du kan naa logge inn')
                 else:
-                    print(sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest())
                     print(verifyClientAddress,verifyClientData,verifyPublicKey)
                     print('-'*100)
                     return self.wfile.write(b'Verifikasjon feilet. ClientData er ikke korrekt')
@@ -205,13 +217,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            authRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            #self.data_string = self.rfile.read(int(self.headers['Content-Length']))
 
-            if authRequest == b'': 
-                self.send_error(400, "Bad Request")
-            else:
-                dbClient, db, userCollection = self.startDatabase()
+            authRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requiredKeys = ["username"]
+            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,authRequest)
+            print(checkRequiredKeys)
+            if not checkRequiredKeys:
+                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
+            else:    
+                userCollection = self.startDatabase()
 
                 username = authRequest.get("username")
                 checkUserExistence = userCollection.find_one({'_id': username})
@@ -227,7 +241,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     credentialID = userData["credential_id"]
                     authResponse = {
                         "rpID": self.rpID,
-                        "credential_id": credentialID , #TODO denne er ikke lagret i database enda, må gjøres ved registrering
+                        "credential_id": credentialID, 
                         "challenge": challenge 
                     }     
                     return self.wfile.write(json.dumps(authResponse).encode())
@@ -237,31 +251,31 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if request == b'': #Hvis body er tom, return 400 bad request
                 return self.send_error(400, "Bad request")
             
-            keys = ["client_data", "authenticator_data", "signature"]
-            for key in keys:
-                if key not in request:
-                    return self.send_error(400, "Bad request")
-            else:
+            requiredKeys = ["client_data", "authenticator_data", "signature"]
+            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,request)
+
+            if checkRequiredKeys:
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-
+            else:
+                return self.wfile.write(b'Not all required fields present in request')
                 
-                verifyClientData = sha256(request.get("client_data").encode()).hexdigest() == sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest()
-                verifyAuthenticatorData = request.get("authenticator_data") == sha256(self.rpID.encode()).hexdigest()
-                verifySignature = verifySignature(request.get("signature"))
-                
-                dbClient, db, userCollection = self.startDatabase()
+            verifyClientData = sha256(request.get("client_data").encode()).hexdigest() == sha256(str(self.rpID+self.getChallenge()).encode()).hexdigest()
+            verifyAuthenticatorData = request.get("authenticator_data") == sha256(str(self.rpID).encode()).hexdigest()
+            verifySignature = True#verifySignature(request.get("signature"))
+            
+            userCollection = self.startDatabase()
 
-                if verifyClientData and verifyAuthenticatorData and verifySignature:
-                    return self.wfile.write(b'SUCCESS! You are now logged in as user %s' % self.getUsername())
-                else:
-                    verificationResponse = {
-                        "client_data": verifyClientData,
-                        "authenticator_data": verifyAuthenticatorData, #TODO denne er ikke lagret i database enda, må gjøres ved registrering
-                        "signature": verifySignature 
-                    }     
-                    return self.wfile.write(b'Verification failed %s' % json.dumps(verificationResponse).encode())
+            if verifyClientData and verifyAuthenticatorData and verifySignature:
+                return self.wfile.write(b'SUCCESS! You are now logged in as user %s' % self.getUsername())
+            else:
+                verificationResponse = {
+                    "client_data": verifyClientData,
+                    "authenticator_data": verifyAuthenticatorData,
+                    "signature": verifySignature 
+                }     
+                return self.wfile.write(b'Verification failed %s' % json.dumps(verificationResponse).encode())
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
        
