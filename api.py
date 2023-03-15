@@ -165,23 +165,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         return self.wfile.write(b"Brukernavn '%s' er allerede i bruk, prov med et nytt" % registerRequest.get("username").encode())
        
         elif self.path == "/register/verification": #siste sted i registreringsprosessen
-            self.data_string = self.rfile.read(int(self.headers['Content-Length']))
-            if self.data_string == b'': #Hvis body er tom, return 400 bad request
-                return self.send_error(400, "Bad request")
+            regAuthRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requiredKeys = ["public_key", "credential_id", "client_data"]
+            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,regAuthRequest)
+
+            if not checkRequiredKeys:
+                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
             else:
                 self.send_response(HTTPStatus.OK)
-                request = json.loads(self.data_string.decode('utf8').replace("'", '"'))
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
 
                 userCollection = self.startDatabase()
-                challenge = self.getChallenge()
 
+                challenge = self.getChallenge()
                 expectedClientAddress = self.getClientAddress()
 
                 verifyClientAddress = expectedClientAddress == self.client_address[0]
-                verifyClientData = request.get("client_data") == sha256(str(self.rpID+challenge).encode()).hexdigest()
-                verifyPublicKey = "public_key" in request
+                verifyClientData = regAuthRequest.get("client_data") == sha256(str(self.rpID+challenge).encode()).hexdigest()
+                verifyPublicKey = "public_key" in regAuthRequest
 
                 print("expected client address:",expectedClientAddress)
                 print("actual client address:",self.client_address[0])
@@ -190,8 +192,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     username = self.getUsername()
                     
                     doc = {
-                    'credential_id': request.get("credential_id"),
-                    'publicKey': request.get("public_key")
+                    'credential_id': regAuthRequest.get("credential_id"),
+                    'publicKey': regAuthRequest.get("public_key")
                     } 
                     userCollection.find_one_and_update({"_id": username}, {"$set":doc})
         
@@ -243,8 +245,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         "rpID": self.rpID,
                         "credential_id": credentialID, 
                         "challenge": challenge 
-                    }     
-                    return self.wfile.write(json.dumps(authResponse).encode())
+                    }
+                    return self.wfile.write(b'SUCCESS, awaiting signed request %s' % json.dumps(authResponse).encode())
                 
         elif self.path == "/auth/verification":
             request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
