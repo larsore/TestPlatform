@@ -5,7 +5,7 @@ Authentication scheme following WebAuthn/FIDO architecture. Signing procedure us
 The following APIs are used in the communication between server, client, pollingServer and authenticator
 
 ## /newcredential 
-
+Used by client to send a new credential to the pollingServer. 
 ### request (fra client -> pollingServer):
 ```json
 {
@@ -20,6 +20,8 @@ The following APIs are used in the communication between server, client, polling
 
 
 ## /polling
+Used by authenticator to poll the pollingServer. 
+Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
 
 ### request (fra authenticator -> pollingServer):
 ```json
@@ -44,6 +46,7 @@ The following APIs are used in the communication between server, client, polling
 
 
 ## /register
+Used by client to register a new user with the server
 
 ### request (fra client -> server):
 ```json
@@ -86,6 +89,7 @@ The following APIs are used in the communication between server, client, polling
 
 
 ## /register/verification
+Last step in register sequence. Client sends public key and more received from authenticator to the server for verification storage.
 
 ### request (fra client -> server):
 ```json
@@ -104,6 +108,7 @@ The following APIs are used in the communication between server, client, polling
 "Verifikasjon OK. Du kan naa logge inn"
 
 ## /auth
+Used by client to log in. Sends username, receives challenge ++
 
 ### request (fra client -> server):
 ```json
@@ -123,6 +128,7 @@ The following APIs are used in the communication between server, client, polling
 ```
 
 ## /auth/verification
+Last step in authentication sequence. Client sends response signed by authenticator to the server. Server verifies the challenge and signature.
 
 ### request (fra client -> server):
 ```json
