@@ -89,8 +89,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
             else:
                 if newPollingRequest['credential_id'] in self.challenges:
-                    pollingResponse = self.challenges[newPollingRequest["credential_id"]] #newPollingRequest = {"credential_id"}
-                    del self.challenges[newPollingRequest["credential_id"]] #remove challenge from dict after sending it to authenticator. 
+                    credId = newPollingRequest["credential_id"]
+                    pollingResponse = self.challenges[credId] #newPollingRequest = {"credential_id"}
+                    del self.challenges[credId] #remove challenge from dict after sending it to authenticator. 
                     self.wfile.write(json.dumps(pollingResponse).encode())
                     print(self.challenges)
                     print("credID exists, response sent to authenticator")
