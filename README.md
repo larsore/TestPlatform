@@ -13,7 +13,7 @@ The following APIs are used in the communication between server, client, polling
     "rp_id": 1,
     "client_data": "dummy data"
 }
-´´´
+```
 
 ### response (fra pollingServer -> client):
 "Credential '3456' added to dict"
@@ -51,9 +51,7 @@ The following APIs are used in the communication between server, client, polling
     "username":"vegard",
     "authenticator_nickname":"myYubiKey1"
 }
-´´´
 ```
-´´´
 
 ### response (fra server -> client):
 ```json
@@ -100,11 +98,7 @@ The following APIs are used in the communication between server, client, polling
     "client_data": "226f76b55acb49701e06ded1d95165d179458f6fc37f5c6fc760ae30dec1c378",
     "signature": "signature"
 }
-´´´
 ```
-
-
-
 ### response (fra server -> client):
 
 "Verifikasjon OK. Du kan naa logge inn"
@@ -116,7 +110,6 @@ The following APIs are used in the communication between server, client, polling
 {
     "username": "vegard"
 }
-´´´
 ```
 
 
@@ -127,7 +120,6 @@ The following APIs are used in the communication between server, client, polling
     "credential_id": "credID",
     "challenge": 377
 }
-´´´
 ```
 
 ## /auth/verification
@@ -140,7 +132,7 @@ The following APIs are used in the communication between server, client, polling
     "signature": "dummy"
 }
 ´´´
-```
+
 
 ### response (fra server -> client):
 
