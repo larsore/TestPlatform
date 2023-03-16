@@ -14,10 +14,6 @@ The following APIs are used in the communication between server, client, polling
     "client_data": "dummy data"
 }
 ´´´
-```
-
-
-
 
 ### response (fra pollingServer -> client):
 "Credential '3456' added to dict"
