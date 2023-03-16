@@ -247,7 +247,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         "credential_id": credentialID, 
                         "challenge": challenge 
                     }
-                    return self.wfile.write(b'SUCCESS, awaiting signed request %s' % json.dumps(authResponse).encode())
+                    print("SUCCESS! awaiting signed request")
+                    return self.wfile.write(json.dumps(authResponse).encode())
                 
         elif self.path == "/auth/verification":
             request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))

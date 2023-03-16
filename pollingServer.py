@@ -4,7 +4,6 @@ import socketserver
 from typing import Tuple
 from http import HTTPStatus
 import socket
-from routes import routes
 from hashlib import sha256
 
 class Handler(http.server.SimpleHTTPRequestHandler):
