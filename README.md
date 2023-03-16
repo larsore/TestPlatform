@@ -131,7 +131,7 @@ The following APIs are used in the communication between server, client, polling
     "authenticator_data": "dummy",
     "signature": "dummy"
 }
-´´´
+```
 
 
 ### response (fra server -> client):
