@@ -7,11 +7,13 @@ The following APIs are used in the communication between server, client, polling
 ## /newcredential 
 
 ### request (fra client -> pollingServer):
+```
 {
     "credential_id": 3456,
     "rp_id": 1,
     "client_data": "dummy data"
 }
+
 
 ### response (fra pollingServer -> client):
 "Credential '3456' added to dict"
