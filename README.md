@@ -7,7 +7,7 @@ The following APIs are used in the communication between server, client, polling
 ## /newcredential 
 
 ### request (fra client -> pollingServer):
-```
+```json
 {
     "credential_id": 3456,
     "rp_id": 1,
@@ -26,16 +26,25 @@ The following APIs are used in the communication between server, client, polling
 ## /polling
 
 ### request (fra authenticator -> pollingServer):
+```json
 {
     "credential_id": 35
 }
+```
+
+
+
 
 ### response (fra pollingServer -> authenticator):
+```json
+
 {
     "credential_id": 35,
     "rp_id": 1,
     "client_data": "dummy data"
 }
+```
+
 
 
 ## /register
