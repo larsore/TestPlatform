@@ -50,14 +50,17 @@ The following APIs are used in the communication between server, client, polling
 ## /register
 
 ### request (fra client -> server):
-
+```json
 {
     "username":"vegard",
     "authenticator_nickname":"myYubiKey1"
 }
+´´´
+```
+´´´
 
 ### response (fra server -> client):
-
+```json
 {
     "publicKey": {
         "attestation": "none",
@@ -85,11 +88,13 @@ The following APIs are used in the communication between server, client, polling
         }
     }
 }
+```
+
 
 ## /register/verification
 
 ### request (fra client -> server):
-
+```json
 {
     "public_key": {
         "matrix_a":[1,2,3,4],
@@ -99,6 +104,9 @@ The following APIs are used in the communication between server, client, polling
     "client_data": "226f76b55acb49701e06ded1d95165d179458f6fc37f5c6fc760ae30dec1c378",
     "signature": "signature"
 }
+´´´
+```
+
 
 
 ### response (fra server -> client):
@@ -108,28 +116,35 @@ The following APIs are used in the communication between server, client, polling
 ## /auth
 
 ### request (fra client -> server):
-
+```json
 {
     "username": "vegard"
 }
+´´´
+```
+
 
 ### response (fra server -> client):
-
+```json
 {
     "rpID": 1,
     "credential_id": "credID",
     "challenge": 377
 }
+´´´
+```
 
 ## /auth/verification
 
 ### request (fra client -> server):
-
+```json
 {
     "client_data": "dummy",
     "authenticator_data": "dummy",
     "signature": "dummy"
 }
+´´´
+```
 
 ### response (fra server -> client):
 
