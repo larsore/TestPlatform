@@ -6,25 +6,25 @@ The following APIs are used in the communication between server, client, polling
 
 ## /newcredential 
 
-###request (fra client -> pollingServer):
+### request (fra client -> pollingServer):
 {
     "credential_id": 3456,
     "rp_id": 1,
     "client_data": "dummy data"
 }
 
-###response (fra pollingServer -> client):
+### response (fra pollingServer -> client):
 "Credential '3456' added to dict"
 
 
-##/polling
+## /polling
 
-###request (fra authenticator -> pollingServer):
+### request (fra authenticator -> pollingServer):
 {
     "credential_id": 35
 }
 
-###response (fra pollingServer -> authenticator):
+### response (fra pollingServer -> authenticator):
 {
     "credential_id": 35,
     "rp_id": 1,
@@ -32,16 +32,16 @@ The following APIs are used in the communication between server, client, polling
 }
 
 
-##/register
+## /register
 
-###request (fra client -> server):
+### request (fra client -> server):
 
 {
     "username":"vegard",
     "authenticator_nickname":"myYubiKey1"
 }
 
-###response (fra server -> client):
+### response (fra server -> client):
 
 {
     "publicKey": {
@@ -71,9 +71,9 @@ The following APIs are used in the communication between server, client, polling
     }
 }
 
-##/register/verification
+## /register/verification
 
-###request (fra client -> server):
+### request (fra client -> server):
 
 {
     "public_key": {
@@ -86,19 +86,19 @@ The following APIs are used in the communication between server, client, polling
 }
 
 
-###response (fra server -> client):
+### response (fra server -> client):
 
 "Verifikasjon OK. Du kan naa logge inn"
 
-##/auth
+## /auth
 
-###request (fra client -> server):
+### request (fra client -> server):
 
 {
     "username": "vegard"
 }
 
-###response (fra server -> client):
+### response (fra server -> client):
 
 {
     "rpID": 1,
@@ -106,9 +106,9 @@ The following APIs are used in the communication between server, client, polling
     "challenge": 377
 }
 
-##/auth/verification
+## /auth/verification
 
-###request (fra client -> server):
+### request (fra client -> server):
 
 {
     "client_data": "dummy",
@@ -116,6 +116,6 @@ The following APIs are used in the communication between server, client, polling
     "signature": "dummy"
 }
 
-###response (fra server -> client):
+### response (fra server -> client):
 
 "SUCCESS! You are now logged in as user 'vegard'"
