@@ -1,4 +1,6 @@
-#Authentication scheme following WebAuthn/FIDO architecture. Signing procedure uses Baby-Dilithium.
+.md
+
+Authentication scheme following WebAuthn/FIDO architecture. Signing procedure uses Baby-Dilithium.
 
 The following APIs are used in the communication between server, client, pollingServer and authenticator
 
