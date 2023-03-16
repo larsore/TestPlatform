@@ -199,6 +199,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         
                     self.setChallenge(0) #For at man ikke skal kunne gjennbruke en clientData-hash og dermed endre public key som allerede er satt
 
+                    #Printing for debugging
                     cursor = userCollection.find({"_id":username})
                     for document in cursor:
                         print(document)
