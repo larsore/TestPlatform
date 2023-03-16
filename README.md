@@ -15,6 +15,7 @@ The following APIs are used in the communication between server, client, polling
 }
 
 
+
 ### response (fra pollingServer -> client):
 "Credential '3456' added to dict"
 
