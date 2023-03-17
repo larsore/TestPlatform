@@ -46,10 +46,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     
 
     def do_GET(self):
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        return self.wfile.write(b'SUCCESS')
+        requestedPath = self.path.rsplit('/', 1)[0]
+        if requestedPath == "/polling":
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            newPollingRequest = self.path.rsplit('/', 1)[1]
+            print('pollingRequest:',newPollingRequest, 'type:',type(newPollingRequest))
+
+            if newPollingRequest.isdigit():
+                if int(newPollingRequest) in self.challenges:
+                    credId = int(newPollingRequest)
+                    pollingResponse = self.challenges[credId] #newPollingRequest = {"credential_id"}
+                    del self.challenges[credId] #remove challenge from dict after sending it to authenticator. 
+                    self.wfile.write(json.dumps(pollingResponse).encode())
+                    print(self.challenges)
+                    print("credID exists, response sent to authenticator")
+                else:
+                    return self.wfile.write(b'No such credentialID exists')
+            else:
+                return self.wfile.write(b'credentialID needs to be an integer')
+        else:
+            self.wfile.write(b"The path %s doesn't exist" % requestedPath.encode)
+
 
 
     def do_POST(self):
@@ -72,31 +91,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self.challenges[newCredentialRequest["credential_id"]] = newCredentialRequest
                     print(self.challenges)
                     return self.wfile.write(b"Credential '%s' added to dict" % str(newCredentialRequest["credential_id"]).encode())
-            
-        
-        elif self.path == "/polling": #fra authenticator
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-
-            newPollingRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            print(newPollingRequest)
-            requiredKeys = ["credential_id"]
-            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newPollingRequest)
-
-            if not checkRequiredKeys:
-                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
-            else:
-                if newPollingRequest['credential_id'] in self.challenges:
-                    credId = newPollingRequest["credential_id"]
-                    pollingResponse = self.challenges[credId] #newPollingRequest = {"credential_id"}
-                    del self.challenges[credId] #remove challenge from dict after sending it to authenticator. 
-                    self.wfile.write(json.dumps(pollingResponse).encode())
-                    print(self.challenges)
-                    print("credID exists, response sent to authenticator")
-
-                else:
-                    return self.wfile.write(b'No challenge for that credID exists')
         else:
             return self.wfile.write(b'No such path exists')
         
