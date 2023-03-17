@@ -6,7 +6,7 @@ The following APIs are used in the communication between server, client, polling
 
 ## /newcredential 
 Used by client to send a new credential to the pollingServer. 
-### request (fra client -> pollingServer):
+### POST-request (fra client -> pollingServer):
 ```json
 {
     "credential_id": 3456,
@@ -19,15 +19,13 @@ Used by client to send a new credential to the pollingServer.
 "Credential '3456' added to dict"
 
 
-## /polling
+## /polling/<credID>
 Used by authenticator to poll the pollingServer. 
 Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
 
-### request (fra authenticator -> pollingServer):
+### GET-request (fra authenticator -> pollingServer):
 ```json
-{
-    "credential_id": 35
-}
+GET /polling/<credID>
 ```
 
 
