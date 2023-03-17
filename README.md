@@ -24,7 +24,7 @@ Used by authenticator to poll the pollingServer.
 Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
 
 ### GET-request (fra authenticator -> pollingServer):
-```json
+```
 GET /polling/<credID>
 ```
 
