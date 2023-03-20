@@ -5,7 +5,6 @@ from typing import Tuple
 from http import HTTPStatus
 import socket
 import numpy as np
-import secrets
 from routes import routes
 import pymongo
 from hashlib import sha256
@@ -150,7 +149,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                     "id": "masterthesis.com", #TODO må være samme som http origin
                                     "name": "Master Thesis"
                                 },
-                                "timeout": 30000,
+                                "timeout": 30000, #30sek
                                 "user": {
                                     "displayName": username,
                                     "id": username
