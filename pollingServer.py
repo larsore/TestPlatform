@@ -70,6 +70,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b"The path %s doesn't exist" % requestedPath.encode)
 
 
+    #/polling/register/
 
     def do_POST(self):
         if self.path == "/newcredential": #fra client

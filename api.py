@@ -12,9 +12,11 @@ from hashlib import sha256
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
-    challenge = 0
+    challenge = 0 #128 bit, 16 byte
     rpID = 1 #TODO skal være en url?
     clientAddress = None
+
+    #credentialDict = {}
 
     def __init__(self, request: bytes, client_address: Tuple[str, int], server: socketserver.BaseServer):
         super().__init__(request, client_address, server)
@@ -129,6 +131,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         }
                         userCollection.insert_one(doc)
 
+                        """
+                        credentialUserId = int(sha256(json.dumps(doc).encode()).hexdigest(), 16)
+                
+                        print(credentialUserId)
+
+                        self.credentialDict[credentialUserId] = username #Add new entry to dict: {username: credentialUserId}
+                        print(self.credentialDict)
+                        """
+
                         cred = {
                             "publicKey": {
                                 "attestation": "none",
@@ -152,7 +163,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 "timeout": 30000, #30sek
                                 "user": {
                                     "displayName": username,
-                                    "id": username
+                                    "id": username #Midlertidig for å linke username og credential sammen. 
                                 }
                             }
                         }
@@ -282,11 +293,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self.wfile.write(b'Verification failed %s' % json.dumps(verificationResponse).encode())
         else:
             return self.wfile.write(b'%s is not a valid path' % self.path.encode())
+        
+    def do_OPTIONS(self):
+        return self.wfile.write(b'Options respons fungerer')
        
 if __name__ == "__main__":
     PORT = 8000
     hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
+    #ip_address = socket.gethostbyname(hostname)
+    ip_address = "127.0.0.1"
     # Create an object of the above class
     my_server = socketserver.TCPServer((ip_address, PORT), Handler)
     # Star the server

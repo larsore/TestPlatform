@@ -48,6 +48,8 @@
 		const loginForm = document.querySelector('#login-form');
 		const optionForm = document.querySelector('#option-form');
 		const backButtonList = document.querySelectorAll('.back-button');
+		
+		const ip_address = 'http://127.0.0.1:8000/register'
 
 
 		registerButton.addEventListener('click', () => {
@@ -76,48 +78,31 @@
 			});
 		});
 
-        // Add an event listener to the Register button
-        registerButton.addEventListener('click', (event) => {
-        // Prevent the default form submission behavior
-            event.preventDefault();
+		registerButton.addEventListener('click', (event) => {	
 
-            // Get the form data
-            const form = document.querySelector('#register-form')[0];
+			const form = document.querySelector('#register-form')[0];
             const formData = new FormData(form);
 
-            // Create an XMLHttpRequest object
-            const http = new XMLHttpRequest();
+			const data = JSON.stringify(Object.fromEntries(formData.entries()))
+			const headers = new Headers();
+			headers.append('Content-Type', 'application/json');
+			headers.append('Origin','http://127.0.0.1:8080');
+			
 
-            // Set the request headers
-            http.setRequestHeader('Content-Type', 'application/json');
-            http.setRequestHeader('Accept', 'application/json');
+			console.log(data)
 
-            // Specify the request method and URL
-            http.open('GET', '10.22.69.155:8000/register');
+			const options = {
+				method: 'POST',
+				headers: headers,
+				body: data
+       		 };
 
-            // Set the onload event handler
-            http.onload = function() {
-                if (http.status === 200) {
-                // Request was successful, do something with the responsefkdømsæøkmc
-                console.log(http.responseText);
-                } else {
-                // Request failed
-                console.error(http.statusText);
-                }
-            };
+			fetch(ip_address, options)
+				.then(response => response.json())
+				.then(data => console.log(data))
+				.catch(error => console.error(error));
+			})
 
-            // Set the onerror event handler
-            http.onerror = function() {
-                console.error('An error occurred while sending the request.');
-            };
-
-            // Send the request
-            /*http.send(JSON.stringify(Object.fromEntries(formData.entries())));*/
-			http.send("Hello World!")
-			Http.onreadystatechange = (e) => {
- 			console.log(Http.responseText)
-			}
-            });
-        </script>
+    </script>
 </body>
 </html>
