@@ -19,7 +19,7 @@ Used by client to send a new credential to the pollingServer.
 "Credential '3456' added to dict"
 
 
-## /polling/credID
+## /polling
 Used by authenticator to poll the pollingServer. 
 Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
 
