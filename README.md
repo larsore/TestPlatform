@@ -9,6 +9,7 @@ Used by client to send a new credential to the pollingServer.
 ### POST-request (fra client -> pollingServer):
 ```json
 {
+    "authenticator_id": 33498
     "credential_id": ""
     "rp_id": 1,
     "client_data": "dummy data"
@@ -25,7 +26,7 @@ Used by client to send credential
 ### POST-request (fra client -> pollingServer):
 ```json
 {
-    "authenticator_id": 3349856349,
+    "authenticator_id": 33498,
     "credential_id": 453
     "rp_id": 1,
     "client_data": "dummy data"
