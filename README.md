@@ -4,32 +4,44 @@ Authentication scheme following WebAuthn/FIDO architecture. Signing procedure us
 
 The following APIs are used in the communication between server, client, pollingServer and authenticator
 
-## /newcredential 
+## /client/register
 Used by client to send a new credential to the pollingServer. 
 ### POST-request (fra client -> pollingServer):
 ```json
 {
-    "credential_id": 3456,
+    "credential_id": ""
     "rp_id": 1,
     "client_data": "dummy data"
 }
 ```
 
 ### response (fra pollingServer -> client):
-"Credential '3456' added to dict"
+If OK, return True
+else return False/error
 
 
-## /polling
+## /client/authenticate
+Used by client to send credential
+### POST-request (fra client -> pollingServer):
+```json
+authenticatorID = {
+    "credential_id": 453
+    "rp_id": 1,
+    "client_data": "dummy data"
+}
+```
+### Response (fra pollingServer -> Client):
+If OK, return True
+else return False/error
+
+## /authenticator/poll/authenticatorID
 Used by authenticator to poll the pollingServer. 
 Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
 
 ### GET-request (fra authenticator -> pollingServer):
 ```
-GET /polling/<credID>
+GET /polling/<authenticatorID>
 ```
-
-
-
 
 ### response (fra pollingServer -> authenticator):
 ```json
@@ -40,8 +52,6 @@ GET /polling/<credID>
     "client_data": "dummy data"
 }
 ```
-
-
 
 ## /register
 Used by client to register a new user with the server
