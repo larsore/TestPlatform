@@ -16,82 +16,126 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def requiredKeysInRequest(self, requiredKeys, request):
         return all(key in request for key in requiredKeys)
 
-    challenges = {
-        1 : {
+    credentials = { 
+        69 : {
+            "credential_id": "",
+            "rp_id": 1,
+            "client_data": "dummy data"
+        },
+        2 : {
+            "authenticator_id": 2,
             "credential_id": None,
             "rp_id": None,
             "client_data": None
         },
-        2 : {
+        3 : {
+            "authenticator_id": 3,
+            "credential_id": None,
+            "rp_id": None,
+            "client_data": None
+        },
+        4 : {
+            "authenticator_id": 4,
             "credential_id": None,
             "rp_id": None,
             "client_data": None
         }}
     
 
-    """
-    def search_by_credential_id(challenges, credential_id):
+    def search_by_credential_id(credentials, credential_id):
         result = []
-        for key, value in challenges.items():
-            if value["credential_id"] == credential_id:
-                result.append(value)
-        return result
-    """
-    def search_by_credential_id(challenges, credential_id):
-        result = []
-        for value in challenges.values():
-            if value["credential_id"] == credential_id:
+        for value in credentials.values():
+            if value["authenticator_id"] == credential_id:
                 result.append(value)
         return result
     
-
+    #GET /authentictor/poll/<authenticatorID>
     def do_GET(self):
         requestedPath = self.path.rsplit('/', 1)[0]
-        if requestedPath == "/polling":
+        if requestedPath == "/authenticator/poll":
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             newPollingRequest = self.path.rsplit('/', 1)[1]
-            print('pollingRequest:',newPollingRequest, 'type:',type(newPollingRequest))
+            print('pollingRequest:',newPollingRequest)
 
             if newPollingRequest.isdigit():
-                if int(newPollingRequest) in self.challenges:
-                    credId = int(newPollingRequest)
-                    pollingResponse = self.challenges[credId] #newPollingRequest = {"credential_id"}
-                    del self.challenges[credId] #remove challenge from dict after sending it to authenticator. 
+                if int(newPollingRequest) in self.credentials:
+                    authenticatorId = int(newPollingRequest)
+                    pollingResponse = self.credentials[authenticatorId] #newPollingRequest = {"credential_id"}
+                    del self.credentials[authenticatorId] #remove challenge from dict after sending it to authenticator. 
+                    print("Deleted authenticatorID",authenticatorId, "from dictionary")
                     self.wfile.write(json.dumps(pollingResponse).encode())
-                    print(self.challenges)
-                    print("credID exists, response sent to authenticator")
+                    print("Remaining credentials",self.credentials)
+                    print("authneticatorID exists, response sent to authenticator")
                 else:
-                    return self.wfile.write(b'No such credentialID exists')
+                    return self.wfile.write(b'No such authneticatorID exists')
             else:
-                return self.wfile.write(b'credentialID needs to be an integer')
+                return self.wfile.write(b'authenticatorID needs to be an integer')
         else:
             self.wfile.write(b"The path %s doesn't exist" % requestedPath.encode)
 
 
-    #/polling/register/
-
+    
     def do_POST(self):
-        if self.path == "/newcredential": #fra client
+        # /client/register
+        if self.path == "/client/register": #fra client
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
 
             newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
-            requiredKeys = ["rp_id", "client_data", "credential_id"]
+            requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
             checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newCredentialRequest)
 
             if not checkRequiredKeys:
                 return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
             else:   
-                if newCredentialRequest["credential_id"] in self.challenges:
-                    return self.wfile.write(b"Credential with credential id '%s' already exists" % str(newCredentialRequest["credential_id"]).encode())
+                if newCredentialRequest["authenticator_id"] in self.credentials:
+                    return self.wfile.write(b"Credential with authenticatorId '%s' already exists" % str(authenticatorId).encode())
                 else:
-                    self.challenges[newCredentialRequest["credential_id"]] = newCredentialRequest
-                    print(self.challenges)
-                    return self.wfile.write(b"Credential '%s' added to dict" % str(newCredentialRequest["credential_id"]).encode())
+                    authenticatorId = newCredentialRequest["authenticator_id"] 
+                    del newCredentialRequest["authenticator_id"] 
+                    self.credentials[authenticatorId] = newCredentialRequest
+                    print("Credential dict: ",self.credentials)
+                    print('-'*100)
+                    return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(authenticatorId).encode())
+
+        # /client/authenticate
+        elif self.path == "/client/authenticate":
+            newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
+            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newCredentialRequest)
+            if not checkRequiredKeys:
+                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
+            if not newCredentialRequest["authenticator_id"] in self.credentials:
+                return self.wfile.write(b'No credential stored for authenticator with id %s' % str(newCredentialRequest["authenticator_id"]).encode())
+            else:
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+
+                self.credentials[newCredentialRequest["authenticator_id"]] = newCredentialRequest #legger credential inn i dict
+                print(self.credentials)
+                print('-'*100)
+                return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(newCredentialRequest["authenticator_id"]).encode())
+
+        elif self.path == "/authentictor/register":
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            print("Register request: ",registerRequest)
+            print('-'*100)
+
+        elif self.path == "/authentictor/authenticate":
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            print("Register request: ",registerRequest)
+            print('-'*100)
         else:
             return self.wfile.write(b'No such path exists')
         
