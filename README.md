@@ -24,7 +24,8 @@ else return False/error
 Used by client to send credential
 ### POST-request (fra client -> pollingServer):
 ```json
-authenticatorID = {
+{
+    "authenticator_id": 3349856349,
     "credential_id": 453
     "rp_id": 1,
     "client_data": "dummy data"
