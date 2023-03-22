@@ -19,7 +19,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     credentials = { 
         69 : {
             "credential_id": "",
-            "rp_id": 1,
+            "rp_id": "rpID",
             "client_data": "dummy data"
         },
         2 : {
@@ -66,8 +66,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     del self.credentials[authenticatorId] #remove challenge from dict after sending it to authenticator. 
                     print("Deleted authenticatorID",authenticatorId, "from dictionary")
                     self.wfile.write(json.dumps(pollingResponse).encode())
+                    print("Response sent: ", pollingResponse)
                     print("Remaining credentials",self.credentials)
                     print("authneticatorID exists, response sent to authenticator")
+                    print('-'*100)
                 else:
                     return self.wfile.write(b'No such authneticatorID exists')
             else:
@@ -126,6 +128,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            response = {"success": "NS Auth"}
+            self.wfile.write(json.dumps(response).encode())
             print("Register request: ",registerRequest)
             print('-'*100)
 
@@ -134,6 +138,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            response = {"success": "NS Auth"}
+            self.wfile.write(json.dumps(response).encode())
             print("Register request: ",registerRequest)
             print('-'*100)
         else:
@@ -143,7 +149,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     PORT = 8000
     hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
+    #ip_address = socket.gethostbyname(hostname)
+    ip_address = "192.168.0.51"
     # Create an object of the above class
     my_server = socketserver.TCPServer((ip_address, PORT), Handler)
     # Star the server
