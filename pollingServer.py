@@ -5,6 +5,7 @@ from typing import Tuple
 from http import HTTPStatus
 import socket
 from hashlib import sha256
+import asyncio
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     
@@ -123,7 +124,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 print('-'*100)
                 return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(newCredentialRequest["authenticator_id"]).encode())
 
-        elif self.path == "/authentictor/register":
+        elif self.path == "/authenticator/register":
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -133,7 +134,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print("Register request: ",registerRequest)
             print('-'*100)
 
-        elif self.path == "/authentictor/authenticate":
+        elif self.path == "/authenticator/authenticate":
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
