@@ -19,10 +19,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(request, client_address, server)
 
     
-    async def register_credential(self, newCredentialRequest):
+    credentials = { 
+        69 : {
+            "credential_id": "",
+            "rp_id": "rpID",
+            "client_data": "dummy data"
+        },
+        2 : {
+            "authenticator_id": 2,
+            "credential_id": None,
+            "rp_id": None,
+            "client_data": None
+        },
+        3 : {
+            "authenticator_id": 3,
+            "credential_id": None,
+            "rp_id": None,
+            "client_data": None
+        },
+        4 : {
+            "authenticator_id": 4,
+            "credential_id": None,
+            "rp_id": None,
+            "client_data": None
+        }}
+    
+
+    async def register_credential(self, newCredentialRequest): #client -> pollingServer, registrere nytt credential
         async with aiohttp.ClientSession() as session:
             url = "http://" + self.ip_address + ':' + str(self.PORT) + "/authenticator/register"
-            async with session.post(url, json=newCredentialRequest) as response:
+            print(url)
+            async with session.post(url, json=newCredentialRequest) as response: #sender post til authenticator 
                 if response.status == HTTPStatus.OK:
                     result = await response.json()
                     return result
@@ -40,13 +67,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
             checkRequiredKeys = self.requiredKeysInRequest(requiredKeys, newCredentialRequest)
+            print('1')
 
             if not checkRequiredKeys:
                 return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
             else:
+                print('2')
                 if newCredentialRequest["authenticator_id"] in self.credentials:
                     return self.wfile.write(b"Credential with authenticatorId '%s' already exists" % str(authenticatorId).encode())
                 else:
+                    print('3')
                     authenticatorId = newCredentialRequest["authenticator_id"]
                     del newCredentialRequest["authenticator_id"]
                     self.credentials[authenticatorId] = newCredentialRequest
@@ -70,4 +100,5 @@ if __name__ == "__main__":
     my_server = socketserver.TCPServer((ip_address, PORT), Handler)
     # Star the server
     print('Server started at ' + ip_address + ':' + str(PORT))
+    asyncio.run(Handler)
     my_server.serve_forever()
