@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e" pages="2">
     <diagram name="Page-1" id="9nSpavD_kLngEqnkLX_T">
-        <mxGraphModel dx="1808" dy="404" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="3999" dy="1220" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -221,7 +221,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="VyJtqUMelZ7oASCZ94De-4" value="&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;{&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;public key,&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/span&gt;credential ID,&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/span&gt;clientData&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="VyJtqUMelZ7oASCZ94De-4" value="&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;{&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;public key,&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/span&gt;credential ID,&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/span&gt;clientData,&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;public_key_seed&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color); font-size: 8px; text-align: left; background-color: rgb(255, 255, 255);&quot;&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="230" y="1050" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="VyJtqUMelZ7oASCZ94De-17" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
@@ -237,7 +237,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="IM2ip-CZQZaXiK0-1fHI" name="Page-2">
-        <mxGraphModel dx="1871" dy="419" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1952" dy="427" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -360,7 +360,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="cYzWqYtb603Sg9v7bhxR-2" value="&lt;div style=&quot;font-size: 10px;&quot;&gt;{&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&lt;span style=&quot;white-space: pre; font-size: 10px;&quot;&gt;&#9;&lt;/span&gt;signature,&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&lt;span style=&quot;white-space: pre; font-size: 10px;&quot;&gt;&#9;&lt;/span&gt;Authenticator data&lt;br style=&quot;font-size: 10px;&quot;&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;}&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=10;labelBorderColor=default;" parent="cYzWqYtb603Sg9v7bhxR-1" vertex="1" connectable="0">
+                <mxCell id="cYzWqYtb603Sg9v7bhxR-2" value="&lt;div style=&quot;font-size: 10px;&quot;&gt;{&lt;/div&gt;&lt;blockquote style=&quot;margin: 0 0 0 40px; border: none; padding: 0px;&quot;&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&quot;w&quot;: liste,&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&quot;z1&quot;: liste.&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&quot;z2&quot;: liste.&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&quot;c&quot;: tall,&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&amp;nbsp;&quot;authenticator_data&quot;: hash&lt;/div&gt;&lt;/blockquote&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;}&lt;br&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=10;labelBorderColor=default;" parent="cYzWqYtb603Sg9v7bhxR-1" vertex="1" connectable="0">
                     <mxGeometry x="0.2516" y="2" relative="1" as="geometry">
                         <mxPoint x="39" y="2" as="offset"/>
                     </mxGeometry>

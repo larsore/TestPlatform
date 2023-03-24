@@ -107,6 +107,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # /client/authenticate
         elif self.path == "/client/authenticate":
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+
             newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
             checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newCredentialRequest)
@@ -115,16 +119,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not newCredentialRequest["authenticator_id"] in self.credentials:
                 return self.wfile.write(b'No credential stored for authenticator with id %s' % str(newCredentialRequest["authenticator_id"]).encode())
             else:
-                self.send_response(HTTPStatus.OK)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-
                 self.credentials[newCredentialRequest["authenticator_id"]] = newCredentialRequest #legger credential inn i dict
                 print(self.credentials)
                 print('-'*100)
                 return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(newCredentialRequest["authenticator_id"]).encode())
-
-        elif self.path == "/authenticator/register":
+            
+        elif self.path == "/authenticator/register" or self.path == "/authenticator/authenticate":
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -134,24 +134,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print("Register request: ",registerRequest)
             print('-'*100)
 
-        elif self.path == "/authenticator/authenticate":
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            response = {"success": "NS Auth"}
-            self.wfile.write(json.dumps(response).encode())
-            print("Register request: ",registerRequest)
-            print('-'*100)
-        else:
-            return self.wfile.write(b'No such path exists')
         
     
 if __name__ == "__main__":
     PORT = 8000
     hostname = socket.gethostname()
-    #ip_address = socket.gethostbyname(hostname)
-    ip_address = "192.168.0.51"
+    ip_address = socket.gethostbyname(hostname)
+    #ip_address = "192.168.0.51"
     # Create an object of the above class
     my_server = socketserver.TCPServer((ip_address, PORT), Handler)
     # Star the server
