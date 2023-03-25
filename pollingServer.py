@@ -1,159 +1,181 @@
-import json
-import http.server
-import socketserver
-from typing import Tuple
-from http import HTTPStatus
+from collections import deque
 import socket
-from hashlib import sha256
-import asyncio
+import socketserver
+import pymongo
+import json
 
-class Handler(http.server.SimpleHTTPRequestHandler):
+class PollingServer:
     
+    activeRequests = {}
 
-    def __init__(self, request: bytes, client_address: Tuple[str, int], server: socketserver.BaseServer):
-        super().__init__(request, client_address, server)
+    handler = None
 
-    
-    def requiredKeysInRequest(self, requiredKeys, request):
-        return all(key in request for key in requiredKeys)
+    first = True
 
-    credentials = { 
-        69 : {
-            "credential_id": "",
-            "rp_id": "rpID",
-            "client_data": "dummy data"
-        },
-        2 : {
-            "authenticator_id": 2,
-            "credential_id": None,
-            "rp_id": None,
-            "client_data": None
-        },
-        3 : {
-            "authenticator_id": 3,
-            "credential_id": None,
-            "rp_id": None,
-            "client_data": None
-        },
-        4 : {
-            "authenticator_id": 4,
-            "credential_id": None,
-            "rp_id": None,
-            "client_data": None
-        }}
-    
+    isAuthenticating = False
 
-    def search_by_credential_id(credentials, credential_id):
-        result = []
-        for value in credentials.values():
-            if value["authenticator_id"] == credential_id:
-                result.append(value)
-        return result
-    
-    #GET /authentictor/poll/<authenticatorID>
-    def do_GET(self):
-        requestedPath = self.path.rsplit('/', 1)[0]
-        if requestedPath == "/authenticator/poll":
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            newPollingRequest = self.path.rsplit('/', 1)[1]
-            print('pollingRequest:',newPollingRequest)
+    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+    testplatformDB = myclient["FIDOServer"]
+    authenticatorCollection = testplatformDB['Authenticators']
 
-            if newPollingRequest.isdigit():
-                if int(newPollingRequest) in self.credentials:
-                    authenticatorId = int(newPollingRequest)
-                    pollingResponse = self.credentials[authenticatorId] #newPollingRequest = {"credential_id"}
-                    del self.credentials[authenticatorId] #remove challenge from dict after sending it to authenticator. 
-                    print("Deleted authenticatorID",authenticatorId, "from dictionary")
-                    self.wfile.write(json.dumps(pollingResponse).encode())
-                    print("Response sent: ", pollingResponse)
-                    print("Remaining credentials",self.credentials)
-                    print("authneticatorID exists, response sent to authenticator")
-                    print('-'*100)
-                else:
-                    return self.wfile.write(b'No such authneticatorID exists')
-            else:
-                return self.wfile.write(b'authenticatorID needs to be an integer')
-        else:
-            self.wfile.write(b"The path %s doesn't exist" % requestedPath.encode)
+    @classmethod
+    def __init__(cls, handler):
+        PollingServer.handler = handler
+        auths = cls.authenticatorCollection.find()
+        for document in auths:
+            cls.activeRequests[document["_id"]] = {
+                "R": deque(),
+                "A": deque(),
+                "RPs": document["RPs"]
+            }
+        print(cls.activeRequests)
 
-
-    
-    def do_POST(self):
-        # /client/register
-        if self.path == "/client/register": #fra client
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-
-            newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-
-            requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
-            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newCredentialRequest)
-
-            if not checkRequiredKeys:
-                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
-            else:   
-                if newCredentialRequest["authenticator_id"] in self.credentials:
-                    return self.wfile.write(b"Credential with authenticatorId '%s' already exists" % str(authenticatorId).encode())
-                else:
-                    authenticatorId = newCredentialRequest["authenticator_id"] 
-                    del newCredentialRequest["authenticator_id"] 
-                    self.credentials[authenticatorId] = newCredentialRequest
-                    print("Credential dict: ",self.credentials)
-                    print('-'*100)
-                    return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(authenticatorId).encode())
-
-        # /client/authenticate
-        elif self.path == "/client/authenticate":
-            newCredentialRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
-            checkRequiredKeys = self.requiredKeysInRequest(requiredKeys,newCredentialRequest)
-            if not checkRequiredKeys:
-                return self.wfile.write(b'Not all required fields present in request. The required fields are %s' % str(requiredKeys).encode())
-            if not newCredentialRequest["authenticator_id"] in self.credentials:
-                return self.wfile.write(b'No credential stored for authenticator with id %s' % str(newCredentialRequest["authenticator_id"]).encode())
-            else:
-                self.send_response(HTTPStatus.OK)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-
-                self.credentials[newCredentialRequest["authenticator_id"]] = newCredentialRequest #legger credential inn i dict
-                print(self.credentials)
-                print('-'*100)
-                return self.wfile.write(b"Credential for authenticatorID '%s' added to dict" % str(newCredentialRequest["authenticator_id"]).encode())
-
-        elif self.path == "/authenticator/register":
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            response = {"success": "NS Auth"}
-            self.wfile.write(json.dumps(response).encode())
-            print("Register request: ",registerRequest)
-            print('-'*100)
-
-        elif self.path == "/authenticator/authenticate":
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            registerRequest = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            response = {"success": "NS Auth"}
-            self.wfile.write(json.dumps(response).encode())
-            print("Register request: ",registerRequest)
-            print('-'*100)
-        else:
-            return self.wfile.write(b'No such path exists')
+    @classmethod
+    def updateDictOnFirstReq(cls, req):
+        if cls.first:
+            print("dsad")
+            cursor = cls.authenticatorCollection.find({"_id": req["authenticator_id"]})
+            for d in cursor:
+                RPs = d["RPs"]
+                cls.activeRequests[req["authenticator_id"]] = {
+                    "R": deque(),
+                    "A": deque(),
+                    "RPs": RPs
+                }
+            cls.first = False
         
+        
+    @classmethod
+    def handlePOSTClientRegister(cls, registerRequest):
+        print(registerRequest)
+
+        cls.updateDictOnFirstReq(registerRequest)
+
+        if registerRequest["authenticator_id"] in list(cls.activeRequests.keys()):
+            if registerRequest["rp_id"] in cls.activeRequests[registerRequest["authenticator_id"]]["RPs"]:
+                return b"Authenticator with specified ID has already registered with the given RP"
+        else:
+            cls.activeRequests[registerRequest["authenticator_id"]] = {
+                "R": deque(),
+                "A": deque(),
+                "RPs": []
+            }
+
+        stack = cls.activeRequests[registerRequest["authenticator_id"]]["R"] 
+
+        if len(stack) == 0:
+            stack.append({
+                "credential_id": "",
+                "rp_id": registerRequest["rp_id"],
+                "client_data": registerRequest["client_data"]
+            })
+            return b"Registration request added to polling server"
+        
+        return b"Pending registration already exists for the given authenticator"
+        
+
+
+    @classmethod
+    def handlePOSTClientAuthenticate(cls, authenticateRequest):
+        print(authenticateRequest)
+
+        cls.updateDictOnFirstReq(authenticateRequest)
+
+        if cls.isAuthenticating:
+            return b"Authenticator is in the middle of an authentication procedure"
+        
+        if authenticateRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
+            return b"Authenticator with specified ID has not registered"
+
+        if authenticateRequest["rp_id"] not in cls.activeRequests[authenticateRequest["authenticator_id"]]["RPs"]:
+            return b"Authenticator with specified ID has not registered with the given RP"
+
+        stack = cls.activeRequests[authenticateRequest["authenticator_id"]]["A"] 
+
+        
+
+        if len(stack) == 0:
+            stack.append({
+                "credential_id": authenticateRequest["credential_id"],
+                "rp_id": authenticateRequest["rp_id"],
+                "client_data": authenticateRequest["client_data"]
+            })
+            return b"Authenticate request added to polling server"
+        
+        return b"Pending authentication request already exists for the given authenticator"
+
     
+    @classmethod
+    def handleGETAuthenticator(cls, authID):
+        if authID not in list(cls.activeRequests.keys()):
+            return b"Authenticator with specified ID has not been registered"
+
+        activeRequests = cls.activeRequests[authID]
+        activeRegistrations = activeRequests["R"]
+        activeAuthentications = activeRequests["A"]
+        
+        if len(activeRegistrations) != 0:
+            request = activeRegistrations.pop()
+            print(cls.activeRequests)
+            return json.dumps({
+                "credential_id": "",
+                "rp_id": request["rp_id"],
+                "client_data": request["client_data"]
+            }).encode()
+        
+        elif len(activeAuthentications) != 0:
+            request = activeAuthentications.pop()
+            cls.isAuthenticating = True
+            return json.dumps({
+                "credential_id": request["credential_id"],
+                "rp_id": request["rp_id"],
+                "client_data": request["client_data"]
+            }).encode()
+             
+        return b"No pending requests for authenticator"
+
+    @classmethod
+    def handleDismissal(cls, req, isAuth):
+        print(req)
+        if isAuth:
+            cls.isAuthenticating = False
+        return json.dumps({"success": "NS Auth Reg"}).encode()
+
+    @classmethod
+    def handlePOSTAuthenticatorRegister(cls, registerRequest):
+        print(registerRequest)
+
+        cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
+
+        docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
+
+        if len(list(docs)) > 0:           
+            cls.authenticatorCollection.update_one({"_id": registerRequest["authenticator_id"]}, {"$push": {"RPs", registerRequest["rp_id"]}})
+        else:
+            newDoc = {
+                "_id": registerRequest["authenticator_id"],
+                "RPs": [registerRequest["rp_id"]]  
+            }
+            cursor = cls.authenticatorCollection.insert_one(newDoc)
+            print(cursor.inserted_id+" added to mongodb")
+
+        return json.dumps({"success": "NS Auth Reg"}).encode()
+
+
+    @classmethod
+    def handlePOSTAuthenticatorAuthenticate(cls, authenticateRequest):
+        print(authenticateRequest)
+        
+        cls.isAuthenticating = False
+
+        return json.dumps({"success": "NS Auth Auth"}).encode()
+
 if __name__ == "__main__":
+    from handler import Handler
+    pollingServer = PollingServer(Handler)
     PORT = 8000
     hostname = socket.gethostname()
-    #ip_address = socket.gethostbyname(hostname)
-    ip_address = "192.168.0.51"
-    # Create an object of the above class
-    my_server = socketserver.TCPServer((ip_address, PORT), Handler)
-    # Star the server
+    ip_address = "192.168.39.177"
+    my_server = socketserver.TCPServer((ip_address, PORT), pollingServer.handler)
     print('Server started at ' + ip_address + ':' + str(PORT))
     my_server.serve_forever()

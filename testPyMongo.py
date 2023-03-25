@@ -4,15 +4,12 @@ import numpy as np
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 testplatformDB = myclient["FIDOServer"]
 
-userCollection = testplatformDB['Users']
+authenticatorCollection = testplatformDB['Authenticators']
+"""
+docs = authenticatorCollection.find({})
 
-#userCollection.delete_many({})
+for doc in docs:
+    print(doc)
+"""
+authenticatorCollection.delete_many({})
 
-cursor = userCollection.find({})
-for document in cursor:
-    print(document)
-
-
-"""cursor = userCollection.find({})
-for document in cursor:
-    print(document)"""
