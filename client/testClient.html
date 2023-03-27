@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Master's Thesis</title>
+<body>
+	<h1>WebAuthn inspired authentication using Baby-Dilithium</h1>
+		
+	<h2>Register a New User</h2>			
+	<label for="username">Username:</label>
+	<input type="text" id="username" name="username" required>
+			
+	<label for="authenticator-nickname">Nickname:</label>
+	<input type="text" id="authenticator-nickname" name="authenticator-nickname" required>
+	
+	<button onclick="handleRegister()">Register</button>
+		
+	<h2>Login</h2>
+	<label for="login-username">Username:</label>
+	<input type="text" id="login-username" name="username" required>
+	<button onclick="handleRegister()">Login</button>
+
+	<script>
+		function handleLogin() {
+			let username = document.forms["login-form"]["username"].value;
+			
+			console.log(username)
+		}
+
+		async function handleRegister() {
+			let authenticator_id = 69;
+    		let rp_id = "NTNU";
+    		let client_data = "csacsadas";
+
+			await fetch('http://192.168.39.177:8000/client/register', {
+				method: "POST",
+				headers: {
+					'Access-Control-Allow-Origin': 'http://192.168.39.177:8080/testClient.html',
+					'Content-Type': 'text/plain'
+				},
+				body: JSON.stringify({
+					"authenticator_id": authenticator_id,
+    				"rp_id": rp_id,
+    				"client_data": client_data
+				})
+			})
+			.then(response => response.json())
+			.then(response => console.log(JSON.stringify(response)))
+
+		}
+
+    </script>
+</body>
+</html>
