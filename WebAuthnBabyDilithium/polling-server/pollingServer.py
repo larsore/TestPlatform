@@ -1,166 +1,94 @@
-from collections import deque
-import pymongo
+from flask import Flask, request
+from flask_cors import cross_origin
 import json
+from pollingHandler import Handler
 
-class PollingServer:
+app = Flask(__name__)
+
+pollingHandler = Handler()
+
+def checkKeys(requiredKeys, keys):
+    if len(requiredKeys) > len(keys):
+        return False
+    for rKey in requiredKeys:
+        if rKey in keys:
+            keys.remove(rKey)
+    if len(keys) == 0:
+        return True
+    return False
+
+# Authenticator API Route to check for incoming registration or authentication attempts
+@app.route("/authenticator/poll", methods=['POST'])
+def authenticatorGet():
+    body = request.json
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["authenticator_id"]
+    if not checkKeys(requiredKeys, list(body.keys())):
+        return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
+    response = pollingHandler.handleGETAuthenticator(body)
+    return response
+
+# Client API Route to POST registration attempts
+@app.route("/client/register", methods=['POST'])
+@cross_origin(origins=["http://localhost:3000"])
+def clientRegister():
+    body = request.json
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["authenticator_id", "rp_id", "client_data"]
+    if not checkKeys(requiredKeys, list(body.keys())):
+        return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    response = pollingHandler.handlePOSTClientRegister(body)
+    return response
+
+# Client API Route to POST authentication attempts
+@app.route("/client/authenticate", methods=['POST'])
+@cross_origin(origins=["http://localhost:3000"])
+def clientAuthenticate():
+    body = request.json
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id"]
+    if not checkKeys(requiredKeys, list(body.keys())):
+        return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    response = pollingHandler.handlePOSTClientAuthenticate(body)
+    return response
+
+# Authenticator API Route to POST registration data
+@app.route("/authenticator/register", methods=['POST'])
+def authenticatorRegister():
+    body = request.json
+
+    if isinstance(body, list):
+        response = pollingHandler.handleDismissal(body, False)
+        return response
+
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["credential_id", "public_key_t", "public_key_seed", "client_data", "rp_id", "authenticator_id"]
+    if not checkKeys(list(body.keys()), requiredKeys):
+        return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    response = pollingHandler.handlePOSTAuthenticatorRegister(body)
+    return response
+
+# Authenticator API Route to POST authentication data
+@app.route("/authenticator/authenticate", methods=['POST'])
+def authenticatorAuthenticate():
+    body = request.json
+
+    if isinstance(body, list):
+        response = pollingHandler.handleDismissal(body, True)
+        return response
+
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["authenticator_data", "w", "z1", "z2", "c"]
+    if not checkKeys(list(body.keys()), requiredKeys):
+        return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)
+    return response
     
-    activeRequests = {}
 
-    handler = None
-
-    first = True
-
-    isAuthenticating = False
-
-    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    testplatformDB = myclient["FIDOServer"]
-    authenticatorCollection = testplatformDB['Authenticators']
-
-    @classmethod
-    def __init__(cls):
-        auths = cls.authenticatorCollection.find()
-        for document in auths:
-            cls.activeRequests[document["_id"]] = {
-                "R": deque(),
-                "A": deque(),
-                "RPs": document["RPs"]
-            }
-        print(cls.activeRequests)
-
-    @classmethod
-    def updateDictOnFirstReq(cls, req):
-        if cls.first:
-            cursor = cls.authenticatorCollection.find({"_id": req["authenticator_id"]})
-            for d in cursor:
-                RPs = d["RPs"]
-                cls.activeRequests[req["authenticator_id"]] = {
-                    "R": deque(),
-                    "A": deque(),
-                    "RPs": RPs
-                }
-            cls.first = False
-        
-        
-    @classmethod
-    def handlePOSTClientRegister(cls, registerRequest):
-        print(registerRequest)
-
-        cls.updateDictOnFirstReq(registerRequest)
-
-        if registerRequest["authenticator_id"] in list(cls.activeRequests.keys()):
-            if registerRequest["rp_id"] in cls.activeRequests[registerRequest["authenticator_id"]]["RPs"]:
-                return json.dumps("Authenticator with specified ID has already registered with the given RP")
-        else:
-            cls.activeRequests[registerRequest["authenticator_id"]] = {
-                "R": deque(),
-                "A": deque(),
-                "RPs": []
-            }
-
-        stack = cls.activeRequests[registerRequest["authenticator_id"]]["R"] 
-
-        if len(stack) == 0:
-            stack.append({
-                "credential_id": "",
-                "rp_id": registerRequest["rp_id"],
-                "client_data": registerRequest["client_data"]
-            })
-            return json.dumps("Registration request added to polling server")
-        
-        return json.dumps("Pending registration already exists for the given authenticator")
-        
-
-
-    @classmethod
-    def handlePOSTClientAuthenticate(cls, authenticateRequest):
-        print(authenticateRequest)
-
-        cls.updateDictOnFirstReq(authenticateRequest)
-
-        if cls.isAuthenticating:
-            return json.dumps("Authenticator is in the middle of an authentication procedure")
-        
-        if authenticateRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
-            return json.dumps("Authenticator with specified ID has not registered")
-
-        if authenticateRequest["rp_id"] not in cls.activeRequests[authenticateRequest["authenticator_id"]]["RPs"]:
-            return json.dumps("Authenticator with specified ID has not registered with the given RP")
-
-        stack = cls.activeRequests[authenticateRequest["authenticator_id"]]["A"] 
-
-        if len(stack) == 0:
-            stack.append({
-                "credential_id": authenticateRequest["credential_id"],
-                "rp_id": authenticateRequest["rp_id"],
-                "client_data": authenticateRequest["client_data"]
-            })
-            return json.dumps("Authenticate request added to polling server")
-        
-        return json.dumps("Pending authentication request already exists for the given authenticator")
-
-    
-    @classmethod
-    def handleGETAuthenticator(cls, body):
-        print(cls.activeRequests)
-        if body["authenticator_id"] not in list(cls.activeRequests.keys()):
-            return json.dumps("Authenticator with specified ID has not been registered")
-
-        activeRequests = cls.activeRequests[body["authenticator_id"]]
-        activeRegistrations = activeRequests["R"]
-        activeAuthentications = activeRequests["A"]
-        
-        if len(activeRegistrations) != 0:
-            request = activeRegistrations.pop()
-            print(cls.activeRequests)
-            return json.dumps({
-                "credential_id": "",
-                "rp_id": request["rp_id"],
-                "client_data": request["client_data"]
-            })
-        
-        elif len(activeAuthentications) != 0:
-            request = activeAuthentications.pop()
-            cls.isAuthenticating = True
-            return json.dumps({
-                "credential_id": request["credential_id"],
-                "rp_id": request["rp_id"],
-                "client_data": request["client_data"]
-            })
-             
-        return json.dumps("No pending requests for authenticator")
-
-    @classmethod
-    def handleDismissal(cls, req, isAuth):
-        print(req)
-        if isAuth:
-            cls.isAuthenticating = False
-        return json.dumps({"success": "NS Auth Reg"})
-
-    @classmethod
-    def handlePOSTAuthenticatorRegister(cls, registerRequest):
-        print(registerRequest)
-
-        cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
-
-        docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
-
-        if len(list(docs)) > 0:           
-            cls.authenticatorCollection.update_one({"_id": registerRequest["authenticator_id"]}, {"$push": {"RPs", registerRequest["rp_id"]}})
-        else:
-            newDoc = {
-                "_id": registerRequest["authenticator_id"],
-                "RPs": [registerRequest["rp_id"]]  
-            }
-            cursor = cls.authenticatorCollection.insert_one(newDoc)
-            print(cursor.inserted_id+" added to mongodb")
-
-        return json.dumps({"success": "NS Auth Reg"})
-
-
-    @classmethod
-    def handlePOSTAuthenticatorAuthenticate(cls, authenticateRequest):
-        print(authenticateRequest)
-        
-        cls.isAuthenticating = False
-
-        return json.dumps({"success": "NS Auth Auth"})
+if __name__ == "__main__":
+    app.run(debug=True, host='0.0.0.0')

@@ -13,7 +13,7 @@ class EventHandler {
     private let babyDiithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776)
     private let hashlib: PythonObject = Python.import("hashlib")
     
-    func handleRegistration(RP_ID: String, clientData: String) {
+    func handleRegistration(RP_ID: String, clientData: String, deviceID: String) {
         let keyPair = babyDiithium.generateKeyPair()
         print("Keypair generated")
         let credential_ID = String(Int.random(in: 1...100))
@@ -36,7 +36,8 @@ class EventHandler {
                 try await CommunicateWithServer.postResponse(publicKey: keyPair.publicKey,
                                                              credential_ID: credential_ID,
                                                              clientData: clientData,
-                                                             RP_ID: RP_ID)
+                                                             RP_ID: RP_ID,
+                                                             deviceID: deviceID)
             } catch {
                 print("Unable to post registration response...")
                 return

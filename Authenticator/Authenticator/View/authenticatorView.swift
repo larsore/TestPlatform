@@ -9,12 +9,6 @@ import SwiftUI
 import LocalAuthentication
 import Foundation
 
-extension UIScreen{
-   static let screenWidth = UIScreen.main.bounds.size.width
-   static let screenHeight = UIScreen.main.bounds.size.height
-   static let screenSize = UIScreen.main.bounds.size
-}
-
 let backgroundGradient = LinearGradient(
     colors: [Color.mint, Color.clear],
     startPoint: .topLeading, endPoint: .bottom)
@@ -24,6 +18,7 @@ struct authenticatorView: View {
     @State private var showRegisterAlert = false
     @State private var showAuthAlert = false
     @State private var isDeciding = false
+    @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
     let keychain = AccessKeychain()
     let eventHandler = EventHandler()
@@ -51,7 +46,7 @@ struct authenticatorView: View {
                         print("lastMessage not updated, still nil")
                         return
                     }
-                    eventHandler.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data)
+                    eventHandler.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data, deviceID: deviceID)
                     isDeciding = false
                 }
                 Button("Dismiss", role: .cancel){
@@ -96,7 +91,7 @@ struct authenticatorView: View {
     }
     
     func pollServerFromView() async -> CommunicateWithServer.GetMessage? {
-        let message = try? await CommunicateWithServer.pollServer()
+        let message = try? await CommunicateWithServer.pollServer(deviceID: deviceID)
         if message != nil {
             isDeciding = true
             if message?.credential_id == "" {
