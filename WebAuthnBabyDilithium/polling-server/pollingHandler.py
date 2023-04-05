@@ -1,10 +1,16 @@
 from collections import deque
 import pymongo
 import json
+import time
 
 class Handler:
     
     activeRequests = {}
+
+    responseToClient = {}
+
+    dismissals = []
+    timedOut = []
 
     handler = None
 
@@ -63,13 +69,31 @@ class Handler:
             stack.append({
                 "credential_id": "",
                 "rp_id": registerRequest["rp_id"],
-                "client_data": registerRequest["client_data"]
+                "client_data": registerRequest["client_data"],
+                "username": registerRequest["username"]
             })
-            return json.dumps("Registration request added to polling server")
+
+            timeout = int(registerRequest["timeout"])
+            waitedTime = 0
+            interval = 0.5
+            while waitedTime <= timeout:
+                waitedTime += interval
+                time.sleep(interval)
+                print("Waited for ", waitedTime, " seconds...")
+                if registerRequest["authenticator_id"] in cls.dismissals:
+                    cls.dismissals.remove(registerRequest["authenticator_id"])
+                    cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
+                    return json.dumps("Authenticator chose to dismiss the registration atttempt")
+                
+                if registerRequest["authenticator_id"] in list(cls.responseToClient.keys()):
+                    response = cls.responseToClient.pop(registerRequest["authenticator_id"], None)
+                    return json.dumps(response)
+            cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
+            cls.timedOut.append(registerRequest["authenticator_id"])
+            return json.dumps("Timeout")
         
         return json.dumps("Pending registration already exists for the given authenticator")
-        
-
+    
 
     @classmethod
     def handlePOSTClientAuthenticate(cls, authenticateRequest):
@@ -115,7 +139,8 @@ class Handler:
             return json.dumps({
                 "credential_id": "",
                 "rp_id": request["rp_id"],
-                "client_data": request["client_data"]
+                "client_data": request["client_data"],
+                "username": request["username"]
             })
         
         elif len(activeAuthentications) != 0:
@@ -132,15 +157,41 @@ class Handler:
     @classmethod
     def handleDismissal(cls, req, isAuth):
         print(req)
+        if req["authenticator_id"] in cls.timedOut:
+            cls.timedOut.remove(req["authenticator_id"])
+            return json.dumps({"success": "Timed Out"})
         if isAuth:
             cls.isAuthenticating = False
+        else:
+            cls.dismissals.append(req["authenticator_id"])
         return json.dumps({"success": "NS Auth Reg"})
 
     @classmethod
     def handlePOSTAuthenticatorRegister(cls, registerRequest):
-        print(registerRequest)
+        print(registerRequest.keys())
+
+        if registerRequest["authenticator_id"] in cls.timedOut:
+            cls.timedOut.remove(registerRequest["authenticator_id"])
+            return json.dumps({"success": "Timed Out"})
 
         cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
+
+        if registerRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
+            cls.responseToClient[registerRequest["authenticator_id"]] = {
+                "credential_id": registerRequest["credential_id"],
+                "public_key": {
+                    "t": registerRequest["public_key_t"],
+                    "seed": registerRequest["public_key_seed"]
+                },
+                "client_data": registerRequest["client_data"],
+                "authenticator_id": registerRequest["authenticator_id"],
+                "signature": {
+                    "w": registerRequest["w"],
+                    "z1": registerRequest["z1"],
+                    "z2": registerRequest["z2"],
+                    "c": registerRequest["c"]
+                }
+            }
 
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
 

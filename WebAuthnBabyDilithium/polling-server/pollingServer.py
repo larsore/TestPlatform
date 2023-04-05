@@ -31,14 +31,17 @@ def authenticatorGet():
 
 # Client API Route to POST registration attempts
 @app.route("/client/register", methods=['POST'])
-@cross_origin(origins=["http://localhost:3000"])
+@cross_origin(origins=["http://192.168.0.19:3000", "http://localhost:3000"])
 def clientRegister():
     body = request.json
+
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_id", "rp_id", "client_data"]
+    requiredKeys = ["authenticator_id", "rp_id", "username", "client_data", "timeout"]
+
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    
     response = pollingHandler.handlePOSTClientRegister(body)
     return response
 
@@ -60,13 +63,13 @@ def clientAuthenticate():
 def authenticatorRegister():
     body = request.json
 
-    if isinstance(body, list):
+    if "msg" in list(body.keys()):
         response = pollingHandler.handleDismissal(body, False)
         return response
 
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["credential_id", "public_key_t", "public_key_seed", "client_data", "rp_id", "authenticator_id"]
+    requiredKeys = ["credential_id", "public_key_t", "public_key_seed", "client_data", "rp_id", "authenticator_id", "w", "z1", "z2", "c"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorRegister(body)
