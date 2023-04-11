@@ -1,0 +1,450 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		855A6EC429B638650072E8CE /* AuthenticatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 855A6EC329B638650072E8CE /* AuthenticatorApp.swift */; };
+		855A6EC629B638650072E8CE /* authenticatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 855A6EC529B638650072E8CE /* authenticatorView.swift */; };
+		855A6EC829B638680072E8CE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 855A6EC729B638680072E8CE /* Assets.xcassets */; };
+		855A6ECB29B638680072E8CE /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 855A6ECA29B638680072E8CE /* Preview Assets.xcassets */; };
+		8575716029BF343C007C4225 /* babyDilithium.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8575715F29BF343C007C4225 /* babyDilithium.swift */; };
+		8575716329BF48E7007C4225 /* NumPy-iOS in Frameworks */ = {isa = PBXBuildFile; productRef = 8575716229BF48E7007C4225 /* NumPy-iOS */; };
+		8575716629BF49FC007C4225 /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8575716529BF49FC007C4225 /* PythonKit */; };
+		8575716929C3680A007C4225 /* eventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8575716829C3680A007C4225 /* eventHandler.swift */; };
+		85B21B7329B9269B00FA1602 /* communicateWithServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B21B7229B9269B00FA1602 /* communicateWithServer.swift */; };
+		85B21B7A29BB8EA200FA1602 /* accessKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B21B7929BB8EA200FA1602 /* accessKeychain.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		855A6EC029B638650072E8CE /* Authenticator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Authenticator.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		855A6EC329B638650072E8CE /* AuthenticatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatorApp.swift; sourceTree = "<group>"; };
+		855A6EC529B638650072E8CE /* authenticatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = authenticatorView.swift; sourceTree = "<group>"; };
+		855A6EC729B638680072E8CE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		855A6ECA29B638680072E8CE /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		8575715F29BF343C007C4225 /* babyDilithium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = babyDilithium.swift; sourceTree = "<group>"; };
+		8575716829C3680A007C4225 /* eventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = eventHandler.swift; sourceTree = "<group>"; };
+		85B21B7029B68FBE00FA1602 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		85B21B7129B91BF100FA1602 /* Authenticator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Authenticator.entitlements; sourceTree = "<group>"; };
+		85B21B7229B9269B00FA1602 /* communicateWithServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = communicateWithServer.swift; sourceTree = "<group>"; };
+		85B21B7929BB8EA200FA1602 /* accessKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = accessKeychain.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		855A6EBD29B638650072E8CE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8575716329BF48E7007C4225 /* NumPy-iOS in Frameworks */,
+				8575716629BF49FC007C4225 /* PythonKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		855A6EB729B638650072E8CE = {
+			isa = PBXGroup;
+			children = (
+				855A6EC229B638650072E8CE /* Authenticator */,
+				855A6EC129B638650072E8CE /* Products */,
+				8575716429BF49FC007C4225 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		855A6EC129B638650072E8CE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				855A6EC029B638650072E8CE /* Authenticator.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		855A6EC229B638650072E8CE /* Authenticator */ = {
+			isa = PBXGroup;
+			children = (
+				85B21B7129B91BF100FA1602 /* Authenticator.entitlements */,
+				85B21B7029B68FBE00FA1602 /* Info.plist */,
+				855A6ED329B643B10072E8CE /* View */,
+				855A6ED129B643320072E8CE /* Model */,
+				855A6EC329B638650072E8CE /* AuthenticatorApp.swift */,
+				855A6EC729B638680072E8CE /* Assets.xcassets */,
+				855A6EC929B638680072E8CE /* Preview Content */,
+			);
+			path = Authenticator;
+			sourceTree = "<group>";
+		};
+		855A6EC929B638680072E8CE /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				855A6ECA29B638680072E8CE /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		855A6ED129B643320072E8CE /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				8575716729BF7C87007C4225 /* SignatureAlgs */,
+				85B21B7229B9269B00FA1602 /* communicateWithServer.swift */,
+				85B21B7929BB8EA200FA1602 /* accessKeychain.swift */,
+				8575716829C3680A007C4225 /* eventHandler.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		855A6ED329B643B10072E8CE /* View */ = {
+			isa = PBXGroup;
+			children = (
+				855A6EC529B638650072E8CE /* authenticatorView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		8575716429BF49FC007C4225 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8575716729BF7C87007C4225 /* SignatureAlgs */ = {
+			isa = PBXGroup;
+			children = (
+				8575715F29BF343C007C4225 /* babyDilithium.swift */,
+			);
+			path = SignatureAlgs;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		855A6EBF29B638650072E8CE /* Authenticator */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 855A6ECE29B638680072E8CE /* Build configuration list for PBXNativeTarget "Authenticator" */;
+			buildPhases = (
+				855A6EBC29B638650072E8CE /* Sources */,
+				855A6EBD29B638650072E8CE /* Frameworks */,
+				855A6EBE29B638650072E8CE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Authenticator;
+			packageProductDependencies = (
+				8575716229BF48E7007C4225 /* NumPy-iOS */,
+				8575716529BF49FC007C4225 /* PythonKit */,
+			);
+			productName = Authenticator;
+			productReference = 855A6EC029B638650072E8CE /* Authenticator.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		855A6EB829B638650072E8CE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1420;
+				LastUpgradeCheck = 1420;
+				TargetAttributes = {
+					855A6EBF29B638650072E8CE = {
+						CreatedOnToolsVersion = 14.2;
+					};
+				};
+			};
+			buildConfigurationList = 855A6EBB29B638650072E8CE /* Build configuration list for PBXProject "Authenticator" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 855A6EB729B638650072E8CE;
+			packageReferences = (
+				85B21B7B29BBC6EC00FA1602 /* XCRemoteSwiftPackageReference "PythonKit" */,
+				8575716129BF48E7007C4225 /* XCRemoteSwiftPackageReference "NumPy-iOS" */,
+			);
+			productRefGroup = 855A6EC129B638650072E8CE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				855A6EBF29B638650072E8CE /* Authenticator */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		855A6EBE29B638650072E8CE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				855A6ECB29B638680072E8CE /* Preview Assets.xcassets in Resources */,
+				855A6EC829B638680072E8CE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		855A6EBC29B638650072E8CE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85B21B7329B9269B00FA1602 /* communicateWithServer.swift in Sources */,
+				85B21B7A29BB8EA200FA1602 /* accessKeychain.swift in Sources */,
+				855A6EC629B638650072E8CE /* authenticatorView.swift in Sources */,
+				855A6EC429B638650072E8CE /* AuthenticatorApp.swift in Sources */,
+				8575716029BF343C007C4225 /* babyDilithium.swift in Sources */,
+				8575716929C3680A007C4225 /* eventHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		855A6ECC29B638680072E8CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		855A6ECD29B638680072E8CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		855A6ECF29B638680072E8CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Authenticator/Authenticator.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Authenticator/Preview Content\"";
+				DEVELOPMENT_TEAM = Q43ZRJUTZP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Authenticator/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authenticator requires the use of biometric authentication";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				NEW_SETTING = "";
+				PRODUCT_BUNDLE_IDENTIFIER = ntnumaster.Authenticator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		855A6ED029B638680072E8CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Authenticator/Authenticator.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Authenticator/Preview Content\"";
+				DEVELOPMENT_TEAM = Q43ZRJUTZP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Authenticator/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authenticator requires the use of biometric authentication";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				NEW_SETTING = "";
+				PRODUCT_BUNDLE_IDENTIFIER = ntnumaster.Authenticator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		855A6EBB29B638650072E8CE /* Build configuration list for PBXProject "Authenticator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				855A6ECC29B638680072E8CE /* Debug */,
+				855A6ECD29B638680072E8CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		855A6ECE29B638680072E8CE /* Build configuration list for PBXNativeTarget "Authenticator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				855A6ECF29B638680072E8CE /* Debug */,
+				855A6ED029B638680072E8CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8575716129BF48E7007C4225 /* XCRemoteSwiftPackageReference "NumPy-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kewlbear/NumPy-iOS.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		85B21B7B29BBC6EC00FA1602 /* XCRemoteSwiftPackageReference "PythonKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pvieito/PythonKit.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8575716229BF48E7007C4225 /* NumPy-iOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8575716129BF48E7007C4225 /* XCRemoteSwiftPackageReference "NumPy-iOS" */;
+			productName = "NumPy-iOS";
+		};
+		8575716529BF49FC007C4225 /* PythonKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 85B21B7B29BBC6EC00FA1602 /* XCRemoteSwiftPackageReference "PythonKit" */;
+			productName = PythonKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 855A6EB829B638650072E8CE /* Project object */;
+}

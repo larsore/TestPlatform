@@ -9,14 +9,11 @@ class Handler:
 
     responseToClient = {}
 
-    dismissals = []
-    timedOut = []
-
     handler = None
 
     first = True
 
-    isAuthenticating = False
+    isActive = {}
 
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
     testplatformDB = myclient["FIDOServer"]
@@ -29,7 +26,13 @@ class Handler:
             cls.activeRequests[document["_id"]] = {
                 "R": deque(),
                 "A": deque(),
-                "RPs": document["RPs"]
+                "RPs": document["RPs"],
+                "dismissed": False,
+                "timedOut": False
+            }
+            cls.isActive[document["_id"]] = {
+                "A": False,
+                "R": False
             }
         print(cls.activeRequests)
 
@@ -42,25 +45,31 @@ class Handler:
                 cls.activeRequests[req["authenticator_id"]] = {
                     "R": deque(),
                     "A": deque(),
-                    "RPs": RPs
+                    "RPs": RPs,
+                    "dismissed": False,
+                    "timedOut": False
                 }
+                
             cls.first = False
         
         
     @classmethod
     def handlePOSTClientRegister(cls, registerRequest):
-        print(registerRequest)
-
+        
         cls.updateDictOnFirstReq(registerRequest)
 
         if registerRequest["authenticator_id"] in list(cls.activeRequests.keys()):
             if registerRequest["rp_id"] in cls.activeRequests[registerRequest["authenticator_id"]]["RPs"]:
                 return json.dumps("Authenticator with specified ID has already registered with the given RP")
         else:
+            if registerRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[registerRequest["authenticator_id"]]["R"]:
+                return json.dumps("Authenticator is currently registrating...")
             cls.activeRequests[registerRequest["authenticator_id"]] = {
                 "R": deque(),
                 "A": deque(),
-                "RPs": []
+                "RPs": [],
+                "dismissed": False,
+                "timedOut": False
             }
 
         stack = cls.activeRequests[registerRequest["authenticator_id"]]["R"] 
@@ -73,6 +82,10 @@ class Handler:
                 "username": registerRequest["username"]
             })
 
+            cls.isActive[registerRequest["authenticator_id"]] = {
+                "A": False,
+                "R": True
+            }
             timeout = int(registerRequest["timeout"])
             waitedTime = 0
             interval = 0.5
@@ -80,28 +93,28 @@ class Handler:
                 waitedTime += interval
                 time.sleep(interval)
                 print("Waited for ", waitedTime, " seconds...")
-                if registerRequest["authenticator_id"] in cls.dismissals:
-                    cls.dismissals.remove(registerRequest["authenticator_id"])
-                    cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
-                    return json.dumps("Authenticator chose to dismiss the registration atttempt")
+                if cls.activeRequests[registerRequest["authenticator_id"]]["dismissed"]:
+                    cls.activeRequests.pop(registerRequest["authenticator_id"], None)
+                    return json.dumps("Authenticator chose to dismiss the registration attempt")
                 
                 if registerRequest["authenticator_id"] in list(cls.responseToClient.keys()):
                     response = cls.responseToClient.pop(registerRequest["authenticator_id"], None)
+                    cls.isActive[registerRequest["authenticator_id"]]["R"] = False
                     return json.dumps(response)
             cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
-            cls.timedOut.append(registerRequest["authenticator_id"])
+            cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"] = True
+            cls.isActive[registerRequest["authenticator_id"]]["R"] = False
             return json.dumps("Timeout")
-        
         return json.dumps("Pending registration already exists for the given authenticator")
     
-
+    
     @classmethod
     def handlePOSTClientAuthenticate(cls, authenticateRequest):
         print(authenticateRequest)
 
         cls.updateDictOnFirstReq(authenticateRequest)
 
-        if cls.isAuthenticating:
+        if authenticateRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[authenticateRequest["authenticator_id"]]["A"]:
             return json.dumps("Authenticator is in the middle of an authentication procedure")
         
         if authenticateRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
@@ -116,16 +129,37 @@ class Handler:
             stack.append({
                 "credential_id": authenticateRequest["credential_id"],
                 "rp_id": authenticateRequest["rp_id"],
-                "client_data": authenticateRequest["client_data"]
+                "client_data": authenticateRequest["client_data"],
+                "username": authenticateRequest["username"]
             })
-            return json.dumps("Authenticate request added to polling server")
+
+            cls.isActive[authenticateRequest["authenticator_id"]]["A"] = True
+            timeout = int(authenticateRequest["timeout"])
+            waitedTime = 0
+            interval = 0.5
+            while waitedTime <= timeout:
+                waitedTime += interval
+                time.sleep(interval)
+                print("Waited for ", waitedTime, " seconds...")
+                if cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"]:
+                    cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"] = False
+                    return json.dumps("Authenticator chose to dismiss the authentication attempt")
+                
+                if authenticateRequest["authenticator_id"] in list(cls.responseToClient.keys()):
+                    print("HEISANN")
+                    response = cls.responseToClient.pop(authenticateRequest["authenticator_id"], None)
+                    cls.isActive[authenticateRequest["authenticator_id"]]["A"] = False
+                    return json.dumps(response)
+            cls.activeRequests[authenticateRequest["authenticator_id"]]["A"] = deque()
+            cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = True
+            cls.isActive[authenticateRequest["authenticator_id"]]["A"] = False
+            return json.dumps("Timeout")
         
         return json.dumps("Pending authentication request already exists for the given authenticator")
 
     
     @classmethod
     def handleGETAuthenticator(cls, body):
-        print(cls.activeRequests)
         if body["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps("Authenticator with specified ID has not been registered")
 
@@ -149,29 +183,36 @@ class Handler:
             return json.dumps({
                 "credential_id": request["credential_id"],
                 "rp_id": request["rp_id"],
-                "client_data": request["client_data"]
+                "client_data": request["client_data"],
+                "username": request["username"]
             })
              
         return json.dumps("No pending requests for authenticator")
 
     @classmethod
-    def handleDismissal(cls, req, isAuth):
+    def handleDismissal(cls, req):
         print(req)
-        if req["authenticator_id"] in cls.timedOut:
-            cls.timedOut.remove(req["authenticator_id"])
-            return json.dumps({"success": "Timed Out"})
-        if isAuth:
-            cls.isAuthenticating = False
+
+        if req["action"] == "auth":
+            cls.isActive[req["authenticator_id"]]["A"] = False
         else:
-            cls.dismissals.append(req["authenticator_id"])
-        return json.dumps({"success": "NS Auth Reg"})
+            cls.isActive[req["authenticator_id"]]["R"] = False
+
+        if cls.activeRequests[req["authenticator_id"]]["timedOut"]:
+            cls.activeRequests[req["authenticator_id"]]["timedOut"] = False
+            if req["action"] == "reg":    
+                cls.activeRequests.pop(req["authenticator_id"], None)
+            return json.dumps({"success": "Timed out"})
+        else:
+            cls.activeRequests[req["authenticator_id"]]["dismissed"] = True
+        return json.dumps({"success": "Dismissed"})
 
     @classmethod
     def handlePOSTAuthenticatorRegister(cls, registerRequest):
-        print(registerRequest.keys())
+        print(list(registerRequest.keys()))
 
-        if registerRequest["authenticator_id"] in cls.timedOut:
-            cls.timedOut.remove(registerRequest["authenticator_id"])
+        if cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"]:
+            cls.activeRequests.pop(registerRequest["authenticator_id"], None)
             return json.dumps({"success": "Timed Out"})
 
         cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
@@ -179,18 +220,14 @@ class Handler:
         if registerRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
             cls.responseToClient[registerRequest["authenticator_id"]] = {
                 "credential_id": registerRequest["credential_id"],
-                "public_key": {
-                    "t": registerRequest["public_key_t"],
-                    "seed": registerRequest["public_key_seed"]
-                },
+                "public_key_t": registerRequest["public_key_t"],
+                "public_key_seed": registerRequest["public_key_seed"],
                 "client_data": registerRequest["client_data"],
                 "authenticator_id": registerRequest["authenticator_id"],
-                "signature": {
-                    "w": registerRequest["w"],
-                    "z1": registerRequest["z1"],
-                    "z2": registerRequest["z2"],
-                    "c": registerRequest["c"]
-                }
+                "w": registerRequest["w"],
+                "z1": registerRequest["z1"],
+                "z2": registerRequest["z2"],
+                "c": registerRequest["c"]
             }
 
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
@@ -210,8 +247,29 @@ class Handler:
 
     @classmethod
     def handlePOSTAuthenticatorAuthenticate(cls, authenticateRequest):
-        print(authenticateRequest)
-        
-        cls.isAuthenticating = False
+        print(list(authenticateRequest.keys()))
+
+        if cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"]:
+            return json.dumps({"success": "Timed Out"})
+
+        if authenticateRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
+            cls.responseToClient[authenticateRequest["authenticator_id"]] = {
+                "authenticator_data": authenticateRequest["authenticator_data"],
+                "w": authenticateRequest["w"],
+                "c": authenticateRequest["c"],
+                "z1": authenticateRequest["z1"],
+                "z2": authenticateRequest["z2"]
+            }
 
         return json.dumps({"success": "NS Auth Auth"})
+    
+    @classmethod
+    def handleClientRegisterFailed(cls, body):
+        result = cls.activeRequests.pop(body["authenticator_id"], None)
+        if result != None:
+            cls.authenticatorCollection.delete_one({"_id": body["authenticator_id"]})
+            return json.dumps("PollingServer have received that "+body["username"]+" was not registered at RP")
+        return json.dumps("PollingServer have not received any registrationattempts for authID =  "+body["authenticator_id"]+"...")
+    
+
+        
