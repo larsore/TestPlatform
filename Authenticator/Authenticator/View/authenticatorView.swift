@@ -15,12 +15,28 @@ let backgroundGradient = LinearGradient(
 
 struct authenticatorView: View {
     
+    struct GrowingButton: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .padding()
+                .background(.blue)
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                .scaleEffect(configuration.isPressed ? 1.2 : 1)
+                .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
+        }
+    }
+    
+    let pasteboard = UIPasteboard.general
+    
     @State private var showRegisterAlert = false
     @State private var showAuthAlert = false
     @State private var isDeciding = false
+    @State private var showCheckMark = false
     @State private var showDeviceID = false
     @State var credID = ""
     @State var registerAlertText = ""
+    @State var authAlertText = ""
     @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
     let keychain = AccessKeychain()
@@ -39,16 +55,35 @@ struct authenticatorView: View {
                 
                 Button("Device ID") {
                     showDeviceID = true
-                }.buttonStyle(.bordered)
+                }
+                .buttonStyle(GrowingButton())
+                .padding(20)
                 
                 if showDeviceID {
-                    Text(deviceID)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.black)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(25)
+                    VStack {
+                        Text(deviceID)
+                            .font(.subheadline)
+                            .foregroundColor(Color.black)
+                            .padding(10)
+                        if !showCheckMark {
+                            Button("Copy to clipboard") {
+                                pasteboard.string = deviceID
+                                showCheckMark = true
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.gray)
+                        } else {
+                            let startX = 200
+                            let startY = 18
+                            Path() { path in
+                            path.move(to: CGPoint(x: startX, y: startY))
+                            path.addLine(to: CGPoint(x: startX+10, y: startY+15))
+                            path.addLine(to: CGPoint(x: startX+25, y: startY-10))
+                            }
+                            .stroke(Color.green, lineWidth: 3)
+                        }
+                    }
+                    
                 }
                 
             }
@@ -74,7 +109,7 @@ struct authenticatorView: View {
                     isDeciding = false
                 }
             }
-            .alert("Authenticate??", isPresented: $showAuthAlert) {
+            .alert(authAlertText, isPresented: $showAuthAlert) {
                 Button("Authenticate") {
                     guard let message: CommunicateWithServer.GetMessage = lastMessage else {
                         print("lastMessage not updated, still nil")
@@ -118,6 +153,7 @@ struct authenticatorView: View {
                 registerAlertText = "Register \(message!.username) to \(message!.rp_id)?"
                 showRegisterAlert = true
             } else {
+                authAlertText = "Authenticate \(message!.username) to \(message!.rp_id)?"
                 showAuthAlert = true
             }
             return message

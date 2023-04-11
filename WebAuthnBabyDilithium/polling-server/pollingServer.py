@@ -6,7 +6,8 @@ from pollingHandler import Handler
 app = Flask(__name__)
 
 pollingHandler = Handler()
-clientUrl = "http://10.22.64.19:3000"
+macClientUrl = "http://10.22.64.19:3000"
+iPhoneClientUrl = "http://10.22.231.65:3000"
 
 def checkKeys(requiredKeys, keys):
     if len(requiredKeys) > len(keys):
@@ -32,7 +33,7 @@ def authenticatorGet():
 
 # Client API Route to POST registration attempts
 @app.route("/client/register", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientRegister():
     body = request.json
 
@@ -48,7 +49,7 @@ def clientRegister():
 
 # Client API Route to POST authentication attempts
 @app.route("/client/authenticate", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticate():
     body = request.json
     for key in body.keys():
@@ -95,18 +96,28 @@ def authenticatorAuthenticate():
     return response
     
 
-
 @app.route("/client/register/failed", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
-def clientFailed():
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
+def clientFailedReg():
     body = request.json
-    
     for key in body.keys():
         body[key] = str(body[key])
     requiredKeys = ["authenticator_id", "username"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handleClientRegisterFailed(body)
+    return response
+
+@app.route("/client/authenticate/failed", methods=['POST'])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
+def clientFailedAuth():
+    body = request.json
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["authenticator_id", "username"]
+    if not checkKeys(list(body.keys()), requiredKeys):
+        return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
+    response = pollingHandler.handleClientLoginFailed(body)
     return response
 
 if __name__ == "__main__":

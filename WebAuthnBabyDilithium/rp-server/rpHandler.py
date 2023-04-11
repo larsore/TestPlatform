@@ -20,8 +20,8 @@ class Handler:
     RPName = "NTNU Master"
     RPID = None
 
-    timeout = 20 #sekunder
-    timer = None
+    timeout = 30 #sekunder
+    timers = {}
 
     dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
     db = dbClient['FIDOServer']
@@ -79,11 +79,12 @@ class Handler:
         credID = cls.credentials[body["username"]]["A"]["credential_id"]
         authID = cls.credentials[body["username"]]["authenticator_id"]
 
-        if body["username"] in list(cls.isActive.keys()) and cls.isActive[body["username"]]["R"]:
+        if body["username"] in list(cls.isActive.keys()) and cls.isActive[body["username"]]["A"]:
             return json.dumps(body["username"]+" is in the middle of an authentication procedure...")
 
-        cls.timer = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], False ,))
-        cls.timer.start()
+        cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], False ,))
+        cls.timers[body["username"]].start()
+        cls.credentials[body["username"]]["timedOut"] = False
         print("Timer started!!")
         cls.isActive[body["username"]]["A"] = True
         return json.dumps({
@@ -117,15 +118,15 @@ class Handler:
 
         if h1.hexdigest() == h2.hexdigest() and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKey, sig=signature, clientData=h1.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
-                cls.timer.cancel()
+                cls.timers[body["username"]].cancel()
 
                 cls.credentials[body["username"]]["completed"] = True    
-                return json.dumps("Success")
+                return json.dumps("Successfully logged in as "+body["username"])
             cls.credentials[body["username"]]["timedOut"] = False
             return json.dumps({
                 "msg": "Timed out bitch!", 
                 "reason": "timeout"})
-        cls.credentials.pop(body["username"], None)
+        cls.isActive[body["username"]]["A"] = False
         return json.dumps({
             "msg": "ClientDataJSON, authData or signature failed!", 
             "reason": "cryptoVerificationFailure"})
@@ -133,7 +134,6 @@ class Handler:
 
     @classmethod
     def handleRegister(cls, body):
-        print(cls.credentials)
         if body["username"] in list(cls.credentials.keys()):
             return json.dumps(body["username"]+" already registered")
 
@@ -147,8 +147,7 @@ class Handler:
                 "id": cls.RPID,
                 "name": cls.RPName
             },
-            "timeout": cls.timeout, 
-            "username": body["username"]
+            "timeout": cls.timeout
         }
 
         cls.credentials[body["username"]] = {
@@ -167,9 +166,8 @@ class Handler:
             "A": False
         }
 
-
-        cls.timer = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], True ,))
-        cls.timer.start()
+        cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], True ,))
+        cls.timers[body["username"]].start()
         print("Timer started!!")
 
         return json.dumps(response)
@@ -210,7 +208,7 @@ class Handler:
 
         if h.hexdigest() == body["client_data"] and Handler.verifySig(pubKey=pubKey, sig=signature, clientData=h.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
-                cls.timer.cancel()
+                cls.timers[body["username"]].cancel()
                 docs = cls.credentialCollection.find({"username": body["username"]})
                 if len(list(docs)) == 0:
                     doc = {
@@ -227,7 +225,7 @@ class Handler:
                     cls.credentials[body["username"]]["completed"] = True
                     cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
                     cls.credentials[body["username"]]["A"]["pubKey"] = pubKey
-                    return json.dumps("Success")
+                    return json.dumps(body["username"]+" is now registered!")
                 cls.credentials.pop(body["username"], None)
                 return json.dumps({
                     "msg": "User already registered for some reason", 

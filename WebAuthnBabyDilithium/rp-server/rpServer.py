@@ -6,7 +6,8 @@ from rpHandler import Handler
 app = Flask(__name__)
 
 responseHandler = Handler(RPID="http://ntnumaster:5050")
-clientUrl = "http://10.22.64.19:3000"
+macClientUrl = "http://10.22.64.19:3000"
+iPhoneClientUrl = "http://10.22.231.65:3000"
 
 def checkKeys(requiredKeys, keys):
     if len(requiredKeys) > len(keys):
@@ -20,7 +21,7 @@ def checkKeys(requiredKeys, keys):
 
 # API Route for register-attempts from client
 @app.route("/register", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientRegister():
     body = request.json
     for key in body.keys():
@@ -35,7 +36,7 @@ def clientRegister():
         
 # API Route for register-attempts from client
 @app.route("/authenticate", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientLogin():
     body = request.json
     for key in body.keys():
@@ -48,7 +49,7 @@ def clientLogin():
 
 # API Route for register-attempts from client
 @app.route("/authenticator/register", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorRegisterResponse():
     body = request.json
     
@@ -63,7 +64,7 @@ def clientAuthenticatorRegisterResponse():
 
 # API Route for register-attempts from client
 @app.route("/authenticator/authenticate", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorAuthenticateResponse():
     body = request.json
     for key in body.keys():
@@ -75,7 +76,7 @@ def clientAuthenticatorAuthenticateResponse():
     return response  
 
 @app.route("/authenticator/register/failed", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorRegistrationFailed():
     body = request.json
     for key in body.keys():
@@ -87,7 +88,7 @@ def clientAuthenticatorRegistrationFailed():
     return response  
 
 @app.route("/authenticator/authenticate/failed", methods=['POST'])
-@cross_origin(origins=[clientUrl, "http://localhost:3000"])
+@cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorAuthenticateFailed():
     body = request.json
     for key in body.keys():
