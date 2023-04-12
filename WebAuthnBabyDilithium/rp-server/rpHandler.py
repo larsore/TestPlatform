@@ -13,6 +13,8 @@ class Handler:
     q = 8380417
     eta = 5
     gamma = 523776
+
+    SHAKElength = 12
     
     credentials = {}
     isActive = {}
@@ -274,7 +276,9 @@ class Handler:
         shake.update(t.tobytes())
         shake.update(w.tobytes())
         shake.update(clientData.encode())
-        if int(shake.hexdigest(1), 16) != c:
+        shakeInt = int(shake.hexdigest(2), 16)
+        computedC = int(bin(shakeInt)[-cls.SHAKElength:], 2)
+        if computedC != c:
             print("Not the same challenge")
             return False
         # Check length
