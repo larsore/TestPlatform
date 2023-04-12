@@ -10,8 +10,9 @@ import PythonKit
 
 class EventHandler {
     
-    private let babyDiithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776)
+    private let babyDiithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776, SHAKElength: 12)
     private let hashlib: PythonObject = Python.import("hashlib")
+    private let os: PythonObject = Python.import("os")
     
     func handleRegistration(RP_ID: String, clientData: String, deviceID: String) -> String? {
         let keyPair = babyDiithium.generateKeyPair()
@@ -90,6 +91,5 @@ class EventHandler {
             }
         }
     }
-    
     
 }

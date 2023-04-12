@@ -23,12 +23,16 @@ class BabyDilithium {
     private let eta: Int
     private let gamma: Int
     
-    init(n: Int, m: Int, q: Int, eta: Int, gamma: Int) {
+    private let SHAKElength: Int
+    
+    init(n: Int, m: Int, q: Int, eta: Int, gamma: Int, SHAKElength: Int) {
         self.n = n
         self.m = m
         self.q = q
         self.eta = eta
         self.gamma = gamma
+        
+        self.SHAKElength = SHAKElength
         
         PythonSupport.initialize()
         NumPySupport.sitePackagesURL.insertPythonPath()
@@ -115,7 +119,7 @@ class BabyDilithium {
     func sign(sk: SecretKey, message: String) -> Signature {
         let A = self.getA(seed: Python.int(sk.seed))
         let t = self.np.remainder(self.np.inner(A, np.array(sk.s1)) + np.array(sk.s2), self.q)
-        var i = 1
+        var k = 1
         while true {
             let y1 = self.getRandomVector(maxNorm: self.gamma, size: self.m)
             let y2 = self.getRandomVector(maxNorm: self.gamma, size: self.n)
@@ -127,20 +131,33 @@ class BabyDilithium {
             shake.update(t.tobytes())
             shake.update(w.tobytes())
             shake.update(Python.str(message).encode())
-            let c = Python.int(shake.hexdigest(1), 16)
+            let shakeInt = Int(Python.int(shake.hexdigest(2), 16))!
+            let bits = String(shakeInt, radix: 2)
+            var shortenedBits = ""
+            var i = 0
+            for bit in bits.reversed() {
+                shortenedBits += String(bit)
+                i+=1
+                if i >= self.SHAKElength {
+                    break
+                }
+            }
+            let binC = String(shortenedBits.reversed())
+            let c = Python.int(strtoul(binC, nil, 2))
             let z1 = c*np.array(sk.s1) + y1
             let z2 = c*np.array(sk.s2) + y2
             let checkz1 = rejectionSampling(z: z1, beta: self.eta)
             let checkz2 = rejectionSampling(z: z2, beta: self.eta)
             if checkz1 && checkz2 {
+                print("Success at attempt number "+String(k))
                 return Signature(
                     z1: self.convertToSwiftList(numpyArray: z1),
                     z2: self.convertToSwiftList(numpyArray: z2),
                     c: Int(c)!,
                     w: self.convertToSwiftList(numpyArray: w))
             }
-            print(String(i) + " rejected")
-            i += 1
+            print("\(k) rejections")
+            k += 1
         }
     }
     

@@ -45,7 +45,7 @@ struct authenticatorView: View {
     var body: some View {
         VStack {
             ScrollView {
-                Text("Baby Dilithium\nAuthenticator")
+                Text("Authenticator")
                     .font(.largeTitle)
                     .fontWeight(.semibold)
                     .foregroundColor(Color.black)
