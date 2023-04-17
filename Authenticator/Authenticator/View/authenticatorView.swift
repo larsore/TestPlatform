@@ -9,6 +9,7 @@ import SwiftUI
 import LocalAuthentication
 import Foundation
 
+
 let backgroundGradient = LinearGradient(
     colors: [Color.mint, Color.clear],
     startPoint: .topLeading, endPoint: .bottom)
@@ -34,13 +35,15 @@ struct authenticatorView: View {
     @State private var isDeciding = false
     @State private var showCheckMark = false
     @State private var showDeviceID = false
+    @State var isSigning = false
+    @State var doneSigning = false
     @State var credID = ""
     @State var registerAlertText = ""
     @State var authAlertText = ""
     @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
     let keychain = AccessKeychain()
-    let eventHandler = EventHandler()
+    let eventHandler = EventHandler(deviceID: UIDevice.current.identifierForVendor!.uuidString)
     
     var body: some View {
         VStack {
@@ -55,6 +58,7 @@ struct authenticatorView: View {
                 
                 Button("Device ID") {
                     showDeviceID = true
+                    showCheckMark = false
                 }
                 .buttonStyle(GrowingButton())
                 .padding(20)
@@ -71,7 +75,7 @@ struct authenticatorView: View {
                                 showCheckMark = true
                             }
                             .buttonStyle(.bordered)
-                            .tint(.gray)
+                            .tint(Color(white: 0.3745))
                         } else {
                             let startX = 200
                             let startY = 18
@@ -83,9 +87,7 @@ struct authenticatorView: View {
                             .stroke(Color.green, lineWidth: 3)
                         }
                     }
-                    
                 }
-                
             }
             .refreshable {
                 Task {
@@ -98,15 +100,18 @@ struct authenticatorView: View {
                         print("lastMessage not updated, still nil")
                         return
                     }
-                    guard let _ = eventHandler.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data, deviceID: deviceID) else {
+                    guard let _ = eventHandler?.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data) else {
                         print("Unable to register")
                         return
                     }
+                    isSigning = false
+                    doneSigning = true
                     isDeciding = false
                 }
                 Button("Dismiss", role: .cancel){
-                    eventHandler.handleDismiss(message: "Authenticator chose to dismiss registration", action: "reg", deviceID: deviceID)
+                    eventHandler?.handleDismiss(message: "Authenticator chose to dismiss registration", action: "reg")
                     isDeciding = false
+                    isSigning = false
                 }
             }
             .alert(authAlertText, isPresented: $showAuthAlert) {
@@ -115,20 +120,34 @@ struct authenticatorView: View {
                         print("lastMessage not updated, still nil")
                         return
                     }
-                    eventHandler.handleAuthentication(credential_ID: message.credential_id, RP_ID: message.rp_id, clientData: message.client_data, deviceID: deviceID)
+                    eventHandler?.handleAuthentication(credential_ID: message.credential_id, RP_ID: message.rp_id, clientData: message.client_data)
+                    isSigning = false
+                    doneSigning = true
                     isDeciding = false
                 }
                 Button("Dismiss", role: .cancel){
-                    eventHandler.handleDismiss(message: "Authenticator chose to dismiss authentication", action: "auth", deviceID: deviceID)
+                    eventHandler?.handleDismiss(message: "Authenticator chose to dismiss authentication", action: "auth")
                     isDeciding = false
+                    isSigning = false
                 }
             }
 
             Spacer()
+                        
+            if doneSigning {
+                Text("Completed")
+                    .foregroundColor(Color.white)
+            }
+            if isSigning {
+                ProgressView()
+                    .scaleEffect(2, anchor: .center)
+            }
+            
             
             Text("Powered by Lars and Vegard")
                 .font(.callout)
                 .foregroundColor(Color.white)
+                .padding(50)
         }
         .background(backgroundGradient)
         .onAppear(perform: startTimer)
@@ -146,9 +165,12 @@ struct authenticatorView: View {
     }
     
     func pollServerFromView() async -> CommunicateWithServer.GetMessage? {
-        let message = try? await CommunicateWithServer.pollServer(deviceID: deviceID)
+        print("Polling")
+        let message = await eventHandler?.handlePolling()
         if message != nil {
             isDeciding = true
+            isSigning = true
+            doneSigning = false
             if message?.credential_id == "" {
                 registerAlertText = "Register \(message!.username) to \(message!.rp_id)?"
                 showRegisterAlert = true
@@ -158,7 +180,6 @@ struct authenticatorView: View {
             }
             return message
         } else {
-            print("Server has no messages for the specific ID")
             return nil
         }
     }

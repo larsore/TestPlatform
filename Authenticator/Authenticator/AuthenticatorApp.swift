@@ -14,8 +14,4 @@ struct AuthenticatorApp: App {
             authenticatorView()
         }
     }
-    
-    
-    
-    
 }

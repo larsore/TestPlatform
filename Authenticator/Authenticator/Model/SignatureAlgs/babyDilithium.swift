@@ -89,13 +89,13 @@ class BabyDilithium {
         let s1 = self.getRandomVector(maxNorm: self.eta, size: self.m)
         let s2 = self.getRandomVector(maxNorm: self.eta, size: self.n)
         let sk = SecretKey(
-            s1: self.convertToSwiftList(numpyArray: s1),
-            s2: self.convertToSwiftList(numpyArray: s2),
+            s1: BabyDilithium.convertToSwiftList(numpyArray: s1),
+            s2: BabyDilithium.convertToSwiftList(numpyArray: s2),
             seed: Int.random(in: 1...100000) // Seed må ses nærmere på
         )
         let A = self.getA(seed: Python.int(sk.seed))
         let t = self.np.remainder(self.np.inner(A, np.array(sk.s1)) + np.array(sk.s2), self.q)
-        let pk = PublicKey(seed: sk.seed, t: self.convertToSwiftList(numpyArray: t))
+        let pk = PublicKey(seed: sk.seed, t: BabyDilithium.convertToSwiftList(numpyArray: t))
         
         return KeyPair(secretKey: sk, publicKey: pk)
     }
@@ -108,12 +108,41 @@ class BabyDilithium {
         return false
     }
     
-    private func convertToSwiftList(numpyArray: PythonObject) -> [Int] {
+    private static func convertToSwiftList(numpyArray: PythonObject) -> [Int] {
         var list: [Int] = []
         for i in 0..<Int(numpyArray.size)! {
             list.append(Int(numpyArray[i])!)
         }
         return list
+    }
+    
+    private func getChallenge(A: PythonObject, t: PythonObject, w: PythonObject, message: PythonObject, last: Bool) -> PythonObject {
+        let shake = self.hashlib.shake_128()
+        shake.update(A.tobytes())
+        shake.update(t.tobytes())
+        shake.update(w.tobytes())
+        shake.update(message)
+        let shakeInt = Int(Python.int(shake.hexdigest(2), 16))!
+        let bits = String(shakeInt, radix: 2)
+        var shortenedBits = ""
+        var i = 0
+        for bit in bits.reversed() {
+            shortenedBits += String(bit)
+            i+=1
+            if i >= self.SHAKElength {
+                break
+            }
+        }
+        let binC = String(shortenedBits.reversed())
+        let c = Python.int(strtoul(binC, nil, 2)) - Python.int(Int(pow(Double(2),Double(self.SHAKElength-1))))
+        if last {
+            print("ShakeInt = \(shakeInt)")
+            print("bits = \(bits)")
+            print("Shakelength amount of bits = \(binC)")
+            print("Actual shake-value = \(Python.int(strtoul(binC, nil, 2)))")
+            print("c = \(c)")
+        }
+        return c
     }
     
     func sign(sk: SecretKey, message: String) -> Signature {
@@ -125,43 +154,28 @@ class BabyDilithium {
             let y2 = self.getRandomVector(maxNorm: self.gamma, size: self.n)
             
             let w = self.np.remainder(self.np.inner(A, y1) + y2, self.q)
+        
+            let c = self.getChallenge(A: A, t: t, w: w, message: Python.str(message).encode(), last: false)
             
-            let shake = self.hashlib.shake_128()
-            shake.update(A.tobytes())
-            shake.update(t.tobytes())
-            shake.update(w.tobytes())
-            shake.update(Python.str(message).encode())
-            let shakeInt = Int(Python.int(shake.hexdigest(2), 16))!
-            let bits = String(shakeInt, radix: 2)
-            var shortenedBits = ""
-            var i = 0
-            for bit in bits.reversed() {
-                shortenedBits += String(bit)
-                i+=1
-                if i >= self.SHAKElength {
-                    break
-                }
-            }
-            let binC = String(shortenedBits.reversed())
-            let c = Python.int(strtoul(binC, nil, 2))
             let z1 = c*np.array(sk.s1) + y1
             let z2 = c*np.array(sk.s2) + y2
             let checkz1 = rejectionSampling(z: z1, beta: self.eta)
             let checkz2 = rejectionSampling(z: z2, beta: self.eta)
             if checkz1 && checkz2 {
                 print("Success at attempt number "+String(k))
+                let _ = self.getChallenge(A: A, t: t, w: w, message: Python.str(message).encode(), last: true)
                 return Signature(
-                    z1: self.convertToSwiftList(numpyArray: z1),
-                    z2: self.convertToSwiftList(numpyArray: z2),
+                    z1: BabyDilithium.convertToSwiftList(numpyArray: z1),
+                    z2: BabyDilithium.convertToSwiftList(numpyArray: z2),
                     c: Int(c)!,
-                    w: self.convertToSwiftList(numpyArray: w))
+                    w: BabyDilithium.convertToSwiftList(numpyArray: w))
             }
             print("\(k) rejections")
             k += 1
         }
     }
     
-    func getSecretKeyAsData(secretKey: SecretKey) -> Data? {
+    static func getSecretKeyAsData(secretKey: SecretKey) -> Data? {
         do {
             let encoded = try JSONEncoder().encode(secretKey)
             guard let keyAsUTF8 = String(data: encoded, encoding: .utf8) else {

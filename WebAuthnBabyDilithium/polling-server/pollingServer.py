@@ -6,7 +6,7 @@ from pollingHandler import Handler
 app = Flask(__name__)
 
 pollingHandler = Handler()
-macClientUrl = "http://10.22.64.19:3000"
+macClientUrl = "http://192.168.39.177:3000"
 iPhoneClientUrl = "http://10.22.231.65:3000"
 
 def checkKeys(requiredKeys, keys):

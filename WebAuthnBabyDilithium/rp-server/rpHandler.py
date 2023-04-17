@@ -14,7 +14,7 @@ class Handler:
     eta = 5
     gamma = 523776
 
-    SHAKElength = 12
+    SHAKElength = 13
     
     credentials = {}
     isActive = {}
@@ -254,6 +254,22 @@ class Handler:
     def handleLoginFailed(cls, body):
         cls.isActive[body["username"]]["A"] = False
         return json.dumps("We have registered that "+body["username"]+" failed authentication")
+    
+    @classmethod
+    def computeSignatureChallenge(cls, A, t, w, clientData):
+        shake = shake_128()
+        shake.update(A.tobytes())
+        shake.update(t.tobytes())
+        shake.update(w.tobytes())
+        shake.update(clientData.encode())
+        shakeInt = int(shake.hexdigest(2), 16)
+        if len(str(bin(shakeInt)))<=cls.SHAKElength+2:
+            computedC = int(bin(shakeInt)[2:], 2) - 2**(cls.SHAKElength-1)
+        else:
+            computedC = int(bin(shakeInt)[-cls.SHAKElength:], 2) - 2**(cls.SHAKElength-1)
+        
+        return computedC
+
 
     @classmethod
     def verifySig(cls, pubKey, sig, clientData):
@@ -271,13 +287,8 @@ class Handler:
         z2 = sig["z2"]
         c = sig["c"]
         
-        shake = shake_128()
-        shake.update(A.tobytes())
-        shake.update(t.tobytes())
-        shake.update(w.tobytes())
-        shake.update(clientData.encode())
-        shakeInt = int(shake.hexdigest(2), 16)
-        computedC = int(bin(shakeInt)[-cls.SHAKElength:], 2)
+        computedC = cls.computeSignatureChallenge(A, t, w, clientData)
+
         if computedC != c:
             print("Not the same challenge")
             return False

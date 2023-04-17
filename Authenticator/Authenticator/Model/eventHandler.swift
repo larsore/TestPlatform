@@ -10,18 +10,32 @@ import PythonKit
 
 class EventHandler {
     
-    private let babyDiithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776, SHAKElength: 12)
+    private let babyDilithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776, SHAKElength: 13)
     private let hashlib: PythonObject = Python.import("hashlib")
     private let os: PythonObject = Python.import("os")
     
-    func handleRegistration(RP_ID: String, clientData: String, deviceID: String) -> String? {
-        let keyPair = babyDiithium.generateKeyPair()
+    private var hashedDeviceID: String
+    
+    init?(deviceID: String) {
+        guard let hashedDeviceID = String(hashlib.sha256(Python.str(deviceID).encode()).hexdigest()) else {
+            print("Unable to hash device-ID and convert it to a SWIFT String")
+            return nil
+        }
+        self.hashedDeviceID = hashedDeviceID
+    }
+    
+    enum HashError: Error {
+        case unableToGenerateHash
+    }
+    
+    func handleRegistration(RP_ID: String, clientData: String) -> String? {
+        let keyPair = babyDilithium.generateKeyPair()
         print("Keypair generated")
         let credential_ID = UUID().uuidString
         print("Generated credential_id: \(credential_ID)")
-        let sig = babyDiithium.sign(sk: keyPair.secretKey, message: clientData)
+        let sig = babyDilithium.sign(sk: keyPair.secretKey, message: clientData)
         
-        let encodedSecretKey = babyDiithium.getSecretKeyAsData(secretKey: keyPair.secretKey)!
+        let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keyPair.secretKey)!
         
         do {
             try AccessKeychain.save(credentialID: credential_ID,
@@ -39,7 +53,7 @@ class EventHandler {
                                                              credential_ID: credential_ID,
                                                              clientData: clientData,
                                                              RP_ID: RP_ID,
-                                                             deviceID: deviceID,
+                                                             hashedDeviceID: self.hashedDeviceID,
                                                              signature: sig)
             } catch {
                 print("Unable to post registration response...")
@@ -50,7 +64,7 @@ class EventHandler {
         return credential_ID
     }
     
-    func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String, deviceID: String) {
+    func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String) {
         guard let data = AccessKeychain.get(
             credentialID: credential_ID,
             RPID: RP_ID
@@ -65,7 +79,7 @@ class EventHandler {
             return
         }
         
-        let sig = babyDiithium.sign(sk: secretKey, message: clientData)
+        let sig = babyDilithium.sign(sk: secretKey, message: clientData)
         
         guard let authenticatorData = String(hashlib.sha256(Python.str(RP_ID).encode()).hexdigest()) else {
             print("Unable to convert authenticatorData python hash to a SWIFT String")
@@ -75,7 +89,7 @@ class EventHandler {
         Task {
             do {
                 try await CommunicateWithServer.postResponse(signature: sig,
-                                                             authenticatorData: authenticatorData, deviceID: deviceID)
+                                                             authenticatorData: authenticatorData, hashedDeviceID: self.hashedDeviceID)
             } catch {
                 print("Unable to post authentication response...")
                 return
@@ -84,12 +98,19 @@ class EventHandler {
         print("Signature and authenticator data sent to pollingServer")
     }
     
-    func handleDismiss(message: String, action: String, deviceID: String) {
+    
+    
+    func handleDismiss(message: String, action: String) {
         Task {
             do {
-                try await CommunicateWithServer.postResponse(dismissMessage: message, action: action, deviceID: deviceID)
+                try await CommunicateWithServer.postResponse(dismissMessage: message, action: action, hashedDeviceID: self.hashedDeviceID)
             }
         }
+    }
+    
+    func handlePolling() async -> CommunicateWithServer.GetMessage? {
+        let message = try? await CommunicateWithServer.pollServer(hashedDeviceID: self.hashedDeviceID)
+        return message
     }
     
 }

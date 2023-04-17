@@ -10,8 +10,8 @@ import Foundation
 
 class CommunicateWithServer {
     
-    private let eventHandler = EventHandler()
-    private static let baseURL = "http://10.22.64.19:5000/authenticator"
+    private static let baseURL = "http://192.168.39.177:5000/authenticator"
+    
     
     struct GetMessage: Decodable {
         let credential_id: String
@@ -29,13 +29,13 @@ class CommunicateWithServer {
         case ResponseCodeNot200
     }
     
-    static func pollServer(deviceID: String) async throws -> GetMessage? {
+    
+    static func pollServer(hashedDeviceID: String) async throws -> GetMessage? {
         guard let url = URL(string: CommunicateWithServer.baseURL + "/poll") else {
             throw CommunicationError.InvalidURL
         }
-        print("Device-ID: \(deviceID)")
         let body: [String: Any] = [
-            "authenticator_id":deviceID
+            "authenticator_id":hashedDeviceID
         ]
         
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
@@ -66,7 +66,7 @@ class CommunicateWithServer {
     }
     
     //REGISTRATION POST
-    static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, deviceID: String, signature: BabyDilithium.Signature) async throws {
+    static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String, signature: BabyDilithium.Signature) async throws {
         guard let url = URL(string: CommunicateWithServer.baseURL+"/register") else {
             throw CommunicationError.InvalidURL
         }
@@ -76,7 +76,7 @@ class CommunicateWithServer {
             "public_key_seed":publicKey.seed,
             "client_data":clientData,
             "rp_id":RP_ID,
-            "authenticator_id":deviceID,
+            "authenticator_id":hashedDeviceID,
             "w":signature.w,
             "z1":signature.z1,
             "z2":signature.z2,
@@ -93,7 +93,7 @@ class CommunicateWithServer {
     
     
     //AUTHENTICATION POST
-    static func postResponse(signature: BabyDilithium.Signature, authenticatorData: String, deviceID: String) async throws {
+    static func postResponse(signature: BabyDilithium.Signature, authenticatorData: String, hashedDeviceID: String) async throws {
         guard let url = URL(string: CommunicateWithServer.baseURL+"/authenticate") else {
             throw CommunicationError.InvalidURL
         }
@@ -103,7 +103,7 @@ class CommunicateWithServer {
             "z1":signature.z1,
             "z2":signature.z2,
             "c":signature.c,
-            "authenticator_id": deviceID
+            "authenticator_id": hashedDeviceID
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")
@@ -115,14 +115,14 @@ class CommunicateWithServer {
     }
     
     //DISMISSAL
-    static func postResponse(dismissMessage: String, action: String, deviceID: String) async throws {
+    static func postResponse(dismissMessage: String, action: String, hashedDeviceID: String) async throws {
         guard let url = URL(string: CommunicateWithServer.baseURL+"/dismiss") else {
             throw CommunicationError.InvalidURL
         }
         if action == "reg" {
             let body: [String: Any] = [
                 "msg": dismissMessage,
-                "authenticator_id": deviceID,
+                "authenticator_id": hashedDeviceID,
                 "action": "reg"
             ]
             Task {
@@ -131,7 +131,7 @@ class CommunicateWithServer {
         } else {
             let body: [String: Any] = [
                 "msg": dismissMessage,
-                "authenticator_id": deviceID,
+                "authenticator_id": hashedDeviceID,
                 "action": "auth"
             ]
             Task {
