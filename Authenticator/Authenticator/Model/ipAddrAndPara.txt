@@ -1,0 +1,7 @@
+url=http://192.168.39.177
+n=1280
+m=1690
+q=8380417
+gamma=1047552
+eta=5
+challengeLength=15

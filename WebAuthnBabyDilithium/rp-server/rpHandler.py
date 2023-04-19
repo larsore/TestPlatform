@@ -8,13 +8,12 @@ from threading import Timer
 
 class Handler:
 
-    n = 1280
-    m = 1690
-    q = 8380417
-    eta = 5
-    gamma = 523776
-
-    SHAKElength = 13
+    n = None
+    m = None
+    q = None
+    eta = None
+    gamma = None
+    SHAKElength = None    
     
     credentials = {}
     isActive = {}
@@ -49,6 +48,16 @@ class Handler:
             }
         for key in list(cls.credentials.keys()):
             print(key, cls.credentials[key]["authenticator_id"])
+        
+    @classmethod
+    def setParameters(cls, n, m, q, eta, gamma, challengeLength):
+        cls.n = n
+        cls.m = m
+        cls.q = q
+        cls.eta = eta
+        cls.gamma = gamma
+        cls.SHAKElength = challengeLength
+
 
     @staticmethod
     def getChallenge():

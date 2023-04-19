@@ -165,7 +165,6 @@ struct authenticatorView: View {
     }
     
     func pollServerFromView() async -> CommunicateWithServer.GetMessage? {
-        print("Polling")
         let message = await eventHandler?.handlePolling()
         if message != nil {
             isDeciding = true

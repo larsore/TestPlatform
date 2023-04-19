@@ -6,8 +6,18 @@ from pollingHandler import Handler
 app = Flask(__name__)
 
 pollingHandler = Handler()
-macClientUrl = "http://192.168.39.177:3000"
-iPhoneClientUrl = "http://10.22.231.65:3000"
+macClientUrl = ""
+iPhoneClientUrl = ""
+
+def loadIp():
+    file = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/ipAddrAndPara.txt", "r")
+    for line in file:
+        words = line.split("=")
+        if words[0] == "url":
+            macClientUrl = words[1]+":3000"
+            return True
+    return False
+    
 
 def checkKeys(requiredKeys, keys):
     if len(requiredKeys) > len(keys):
@@ -121,4 +131,8 @@ def clientFailedAuth():
     return response
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0')
+    isLoaded = loadIp()
+    if isLoaded:
+        app.run(debug=True, host='0.0.0.0')
+    else:
+        print("IP address not set")

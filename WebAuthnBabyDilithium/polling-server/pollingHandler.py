@@ -83,7 +83,7 @@ class Handler:
                     cls.isActive[registerRequest["authenticator_id"]]["R"] = False
                     return json.dumps(response)
             cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
-            cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"] = False
+            cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"] = True
             cls.isActive[registerRequest["authenticator_id"]]["R"] = False
             return json.dumps("Timeout")
         return json.dumps("Pending registration already exists for the given authenticator")

@@ -15,6 +15,7 @@
 		8575716329BF48E7007C4225 /* NumPy-iOS in Frameworks */ = {isa = PBXBuildFile; productRef = 8575716229BF48E7007C4225 /* NumPy-iOS */; };
 		8575716629BF49FC007C4225 /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8575716529BF49FC007C4225 /* PythonKit */; };
 		8575716929C3680A007C4225 /* eventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8575716829C3680A007C4225 /* eventHandler.swift */; };
+		8581B7D229EEECE700D35638 /* ipAddrAndPara.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8581B7D129EEECE700D35638 /* ipAddrAndPara.txt */; };
 		85B21B7329B9269B00FA1602 /* communicateWithServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B21B7229B9269B00FA1602 /* communicateWithServer.swift */; };
 		85B21B7A29BB8EA200FA1602 /* accessKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B21B7929BB8EA200FA1602 /* accessKeychain.swift */; };
 /* End PBXBuildFile section */
@@ -27,6 +28,7 @@
 		855A6ECA29B638680072E8CE /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		8575715F29BF343C007C4225 /* babyDilithium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = babyDilithium.swift; sourceTree = "<group>"; };
 		8575716829C3680A007C4225 /* eventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = eventHandler.swift; sourceTree = "<group>"; };
+		8581B7D129EEECE700D35638 /* ipAddrAndPara.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ipAddrAndPara.txt; sourceTree = "<group>"; };
 		85B21B7029B68FBE00FA1602 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		85B21B7129B91BF100FA1602 /* Authenticator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Authenticator.entitlements; sourceTree = "<group>"; };
 		85B21B7229B9269B00FA1602 /* communicateWithServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = communicateWithServer.swift; sourceTree = "<group>"; };
@@ -88,6 +90,7 @@
 		855A6ED129B643320072E8CE /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				8581B7D129EEECE700D35638 /* ipAddrAndPara.txt */,
 				8575716729BF7C87007C4225 /* SignatureAlgs */,
 				85B21B7229B9269B00FA1602 /* communicateWithServer.swift */,
 				85B21B7929BB8EA200FA1602 /* accessKeychain.swift */,
@@ -187,6 +190,7 @@
 			files = (
 				855A6ECB29B638680072E8CE /* Preview Assets.xcassets in Resources */,
 				855A6EC829B638680072E8CE /* Assets.xcassets in Resources */,
+				8581B7D229EEECE700D35638 /* ipAddrAndPara.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

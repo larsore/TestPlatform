@@ -10,22 +10,83 @@ import PythonKit
 
 class EventHandler {
     
-    private let babyDilithium = BabyDilithium(n: 1280, m: 1690, q: 8380417, eta: 5, gamma: 523776, SHAKElength: 13)
-    private let hashlib: PythonObject = Python.import("hashlib")
-    private let os: PythonObject = Python.import("os")
+    private var babyDilithium: BabyDilithium
+    private var hashlib: PythonObject
+    private var os: PythonObject
     
     private var hashedDeviceID: String
     
     init?(deviceID: String) {
+        guard let ipAddrAndPara = EventHandler.readIpAndPara(filename: "ipAddrAndPara", fileEnding: "txt") else {
+            print("Unable to extract data from file")
+            return nil
+        }
+        CommunicateWithServer.SetUrl(url: ipAddrAndPara.pollingUrl+"/authenticator")
+        self.babyDilithium = BabyDilithium(n: ipAddrAndPara.n,
+                                           m: ipAddrAndPara.m,
+                                           q: ipAddrAndPara.q,
+                                           eta: ipAddrAndPara.eta,
+                                           gamma: ipAddrAndPara.gamma,
+                                           SHAKElength: ipAddrAndPara.challengeLength)
+        
+        self.hashlib = Python.import("hashlib")
+        self.os = Python.import("os")
+        
         guard let hashedDeviceID = String(hashlib.sha256(Python.str(deviceID).encode()).hexdigest()) else {
             print("Unable to hash device-ID and convert it to a SWIFT String")
             return nil
         }
         self.hashedDeviceID = hashedDeviceID
+    
     }
     
-    enum HashError: Error {
-        case unableToGenerateHash
+    private struct PollingAddressAndParameters {
+        var n: Int
+        var m: Int
+        var q: Int
+        var gamma: Int
+        var eta: Int
+        var challengeLength: Int
+        var pollingUrl: String
+    }
+    
+    private static func readIpAndPara(filename: String, fileEnding: String) -> PollingAddressAndParameters? {
+    
+        var pollingAddressAndParameters = PollingAddressAndParameters(n: 0, m: 0, q: 0, gamma: 0, eta: 0, challengeLength: 0, pollingUrl: "")
+        
+        var lines = [String]()
+        if let fileUrl = Bundle.main.url(forResource: filename, withExtension: fileEnding) {
+            if let contents = try? String(contentsOf: fileUrl) {
+                lines = contents.components(separatedBy: "\n")
+            }
+        }
+        if lines.isEmpty {
+            print("Unable to localize file or load the contents of it")
+            return nil
+        }
+        for line in lines {
+            let words = line.components(separatedBy: "=")
+            if words[0] == "url" {
+                pollingAddressAndParameters.pollingUrl = words[1]+":5000"
+            } else if words[0] == "n" {
+                pollingAddressAndParameters.n = Int(words[1])!
+            } else if words[0] == "m" {
+                pollingAddressAndParameters.m = Int(words[1])!
+            } else if words[0] == "q" {
+                pollingAddressAndParameters.q = Int(words[1])!
+            } else if words[0] == "gamma" {
+                pollingAddressAndParameters.gamma = Int(words[1])!
+            } else if words[0] == "eta" {
+                pollingAddressAndParameters.eta = Int(words[1])!
+            } else if words[0] == "challengeLength" {
+                pollingAddressAndParameters.challengeLength = Int(words[1])!
+            }
+        }
+        if pollingAddressAndParameters.n == 0 || pollingAddressAndParameters.m == 0 || pollingAddressAndParameters.q == 0 || pollingAddressAndParameters.gamma == 0 || pollingAddressAndParameters.eta == 0 || pollingAddressAndParameters.challengeLength == 0 || pollingAddressAndParameters.pollingUrl == "" {
+            print("Not all values read correctly from text-file...")
+            return nil
+        }
+        return pollingAddressAndParameters
     }
     
     func handleRegistration(RP_ID: String, clientData: String) -> String? {

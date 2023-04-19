@@ -10,14 +10,17 @@ import Foundation
 
 class CommunicateWithServer {
     
-    private static let baseURL = "http://192.168.39.177:5000/authenticator"
-    
+    private static var baseURL: String?
     
     struct GetMessage: Decodable {
         let credential_id: String
         let rp_id: String
         let client_data: String
         let username: String
+    }
+    
+    static func SetUrl(url: String) {
+        CommunicateWithServer.baseURL = url
     }
     
     struct SuccessInfo: Decodable {
@@ -31,7 +34,11 @@ class CommunicateWithServer {
     
     
     static func pollServer(hashedDeviceID: String) async throws -> GetMessage? {
-        guard let url = URL(string: CommunicateWithServer.baseURL + "/poll") else {
+        guard let baseUrl = CommunicateWithServer.baseURL else {
+            print("BaseUrl not set")
+            return nil
+        }
+        guard let url = URL(string: baseUrl + "/poll") else {
             throw CommunicationError.InvalidURL
         }
         let body: [String: Any] = [
@@ -67,7 +74,11 @@ class CommunicateWithServer {
     
     //REGISTRATION POST
     static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String, signature: BabyDilithium.Signature) async throws {
-        guard let url = URL(string: CommunicateWithServer.baseURL+"/register") else {
+        guard let baseUrl = CommunicateWithServer.baseURL else {
+            print("BaseUrl not set")
+            return
+        }
+        guard let url = URL(string: baseUrl+"/register") else {
             throw CommunicationError.InvalidURL
         }
         let body: [String: Any] = [
@@ -94,7 +105,11 @@ class CommunicateWithServer {
     
     //AUTHENTICATION POST
     static func postResponse(signature: BabyDilithium.Signature, authenticatorData: String, hashedDeviceID: String) async throws {
-        guard let url = URL(string: CommunicateWithServer.baseURL+"/authenticate") else {
+        guard let baseUrl = CommunicateWithServer.baseURL else {
+            print("BaseUrl not set")
+            return
+        }
+        guard let url = URL(string: baseUrl+"/authenticate") else {
             throw CommunicationError.InvalidURL
         }
         let body: [String: Any] = [
@@ -116,7 +131,11 @@ class CommunicateWithServer {
     
     //DISMISSAL
     static func postResponse(dismissMessage: String, action: String, hashedDeviceID: String) async throws {
-        guard let url = URL(string: CommunicateWithServer.baseURL+"/dismiss") else {
+        guard let baseUrl = CommunicateWithServer.baseURL else {
+            print("BaseUrl not set")
+            return
+        }
+        guard let url = URL(string: baseUrl+"/dismiss") else {
             throw CommunicationError.InvalidURL
         }
         if action == "reg" {
