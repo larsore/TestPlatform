@@ -22,12 +22,14 @@ class EventHandler {
             return nil
         }
         CommunicateWithServer.SetUrl(url: ipAddrAndPara.pollingUrl+"/authenticator")
-        self.babyDilithium = BabyDilithium(n: ipAddrAndPara.n,
-                                           m: ipAddrAndPara.m,
-                                           q: ipAddrAndPara.q,
-                                           eta: ipAddrAndPara.eta,
-                                           gamma: ipAddrAndPara.gamma,
-                                           SHAKElength: ipAddrAndPara.challengeLength)
+        self.babyDilithium = BabyDilithium(
+            q: ipAddrAndPara.q,
+            beta: ipAddrAndPara.beta,
+            d: ipAddrAndPara.d,
+            n: ipAddrAndPara.n,
+            m: ipAddrAndPara.m,
+            gamma: ipAddrAndPara.gamma
+        )
         
         self.hashlib = Python.import("hashlib")
         self.os = Python.import("os")
@@ -41,18 +43,18 @@ class EventHandler {
     }
     
     private struct PollingAddressAndParameters {
+        var q: Int
+        var beta: Int
+        var d: Int
         var n: Int
         var m: Int
-        var q: Int
         var gamma: Int
-        var eta: Int
-        var challengeLength: Int
         var pollingUrl: String
     }
     
     private static func readIpAndPara(filename: String, fileEnding: String) -> PollingAddressAndParameters? {
     
-        var pollingAddressAndParameters = PollingAddressAndParameters(n: 0, m: 0, q: 0, gamma: 0, eta: 0, challengeLength: 0, pollingUrl: "")
+        var pollingAddressAndParameters = PollingAddressAndParameters(q: 0, beta: 0, d: 0, n: 0, m: 0, gamma: 0, pollingUrl: "")
         
         var lines = [String]()
         if let fileUrl = Bundle.main.url(forResource: filename, withExtension: fileEnding) {
@@ -68,21 +70,21 @@ class EventHandler {
             let words = line.components(separatedBy: "=")
             if words[0] == "url" {
                 pollingAddressAndParameters.pollingUrl = words[1]+":5000"
+            } else if words[0] == "q" {
+                pollingAddressAndParameters.q = Int(words[1])!
+            } else if words[0] == "beta" {
+                pollingAddressAndParameters.beta = Int(words[1])!
+            } else if words[0] == "d" {
+                pollingAddressAndParameters.d = Int(words[1])!
             } else if words[0] == "n" {
                 pollingAddressAndParameters.n = Int(words[1])!
             } else if words[0] == "m" {
                 pollingAddressAndParameters.m = Int(words[1])!
-            } else if words[0] == "q" {
-                pollingAddressAndParameters.q = Int(words[1])!
             } else if words[0] == "gamma" {
                 pollingAddressAndParameters.gamma = Int(words[1])!
-            } else if words[0] == "eta" {
-                pollingAddressAndParameters.eta = Int(words[1])!
-            } else if words[0] == "challengeLength" {
-                pollingAddressAndParameters.challengeLength = Int(words[1])!
             }
         }
-        if pollingAddressAndParameters.n == 0 || pollingAddressAndParameters.m == 0 || pollingAddressAndParameters.q == 0 || pollingAddressAndParameters.gamma == 0 || pollingAddressAndParameters.eta == 0 || pollingAddressAndParameters.challengeLength == 0 || pollingAddressAndParameters.pollingUrl == "" {
+        if pollingAddressAndParameters.q == 0 || pollingAddressAndParameters.beta == 0 || pollingAddressAndParameters.d == 0 || pollingAddressAndParameters.n == 0 || pollingAddressAndParameters.m == 0 || pollingAddressAndParameters.gamma == 0 || pollingAddressAndParameters.pollingUrl == "" {
             print("Not all values read correctly from text-file...")
             return nil
         }
@@ -150,7 +152,9 @@ class EventHandler {
         Task {
             do {
                 try await CommunicateWithServer.postResponse(signature: sig,
-                                                             authenticatorData: authenticatorData, hashedDeviceID: self.hashedDeviceID)
+                                                             authenticatorData: authenticatorData,
+                                                             hashedDeviceID: self.hashedDeviceID
+                )
             } catch {
                 print("Unable to post authentication response...")
                 return

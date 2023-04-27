@@ -83,15 +83,15 @@ class CommunicateWithServer {
         }
         let body: [String: Any] = [
             "credential_id":credential_ID,
-            "public_key_t":publicKey.t,
+            "public_key_t":publicKey.tCoeffs,
             "public_key_seed":publicKey.seed,
             "client_data":clientData,
             "rp_id":RP_ID,
             "authenticator_id":hashedDeviceID,
-            "w":signature.w,
-            "z1":signature.z1,
-            "z2":signature.z2,
-            "c":signature.c
+            "w":signature.wCoeffs,
+            "z1":signature.z1Coeffs,
+            "z2":signature.z2Coeffs,
+            "c":signature.cCoeffs
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")
@@ -114,10 +114,10 @@ class CommunicateWithServer {
         }
         let body: [String: Any] = [
             "authenticator_data":authenticatorData,
-            "w":signature.w,
-            "z1":signature.z1,
-            "z2":signature.z2,
-            "c":signature.c,
+            "w":signature.wCoeffs,
+            "z1":signature.z1Coeffs,
+            "z2":signature.z1Coeffs,
+            "c":signature.cCoeffs,
             "authenticator_id": hashedDeviceID
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {

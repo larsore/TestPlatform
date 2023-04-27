@@ -302,7 +302,7 @@ class Handler:
             print("Not the same challenge")
             return False
         # Check length
-        if (not np.all(np.isin(z1, np.arange(-(cls.gamma-cls.eta), (cls.gamma-cls.eta)+1)))) or (not np.all(np.isin(z2, np.arange(-(cls.gamma-cls.eta), (cls.gamma-cls.eta)+1)))):
+        if not np.maximum(z1.max(), abs(z1.min())) <= cls.gamma or not np.maximum(z2.max(), abs(z2.min())) <= cls.gamma:
             print("z1 or z2 is not short...")
             return False
         if not np.array_equal((np.inner(A, z1) + z2 - c*t)%cls.q, w):

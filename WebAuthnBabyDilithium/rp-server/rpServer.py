@@ -47,6 +47,7 @@ def loadIpAndPara():
         gamma=parameters["gamma"], 
         eta=parameters["eta"], 
         challengeLength=parameters["challengeLength"])
+    print(parameters)
     return True
 
 

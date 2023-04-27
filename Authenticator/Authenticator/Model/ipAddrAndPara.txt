@@ -1,7 +1,7 @@
-url=http://192.168.39.177
-n=1280
-m=1690
+url=http://10.22.66.159
 q=8380417
-gamma=1047552
-eta=5
-challengeLength=15
+beta=5
+d=256
+n=5
+m=4
+gamma=275
