@@ -1,6 +1,7 @@
 import pymongo
 import os
 import numpy as np
+from numpy.polynomial import Polynomial
 import json
 from hashlib import sha256, shake_128
 from threading import Timer
@@ -8,12 +9,14 @@ from threading import Timer
 
 class Handler:
 
+    q = None
+    beta = None
+    d = None
     n = None
     m = None
-    q = None
-    eta = None
-    gamma = None
-    SHAKElength = None    
+    gamma = None 
+    approxBeta = None 
+    f = None  
     
     credentials = {}
     isActive = {}
@@ -50,13 +53,16 @@ class Handler:
             print(key, cls.credentials[key]["authenticator_id"])
         
     @classmethod
-    def setParameters(cls, n, m, q, eta, gamma, challengeLength):
+    def setParameters(cls, q, beta, d, n, m, gamma):
+        cls.q = q
+        cls.beta = beta
+        cls.d = d
         cls.n = n
         cls.m = m
-        cls.q = q
-        cls.eta = eta
         cls.gamma = gamma
-        cls.SHAKElength = challengeLength
+        cls.approxBeta = int((q-1)/16)
+        fCoeff = np.array([1]+[0]*(d-2)+[1])
+        cls.f = np.polynomial.Polynomial(fCoeff)
 
 
     @staticmethod
@@ -68,11 +74,12 @@ class Handler:
     def getPublicKeyParams(cls):
         return {
             "algName": "BabyDilithium",
+            "q": cls.q,
+            "beta": cls.beta,
+            "d": cls.d,
             "n": cls.n,
             "m": cls.m,
-            "q": cls.q,
-            "eta": cls.eta,
-            "gamma": cls.gamma
+            "gamma": cls.gamma 
         }
     
     @classmethod
@@ -118,16 +125,19 @@ class Handler:
         h2.update(body["challenge"].encode())
 
         pubKey = cls.credentials[body["username"]]["A"]["pubKey"]
-        pubKey["t"] = np.frombuffer(pubKey["t"], dtype=int)
-
+        pubKeyVerify = {
+            "t": Handler.coeffsToPolynomial(np.array(pubKey["t"])),
+            "seedVector": np.array(pubKey["seedVector"], dtype=int)
+        }
+        
         signature = {
-            "w": np.array(json.loads(body["w"]), dtype=int),
-            "c": int(body["c"]),
-            "z1": np.array(json.loads(body["z1"]), dtype=int),
-            "z2": np.array(json.loads(body["z2"]), dtype=int)
+            "w": Handler.coeffsToPolynomial(np.array(json.loads(body["w"]), dtype=int)),
+            "c": str(body["c"]),
+            "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
+            "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
         }
 
-        if h1.hexdigest() == h2.hexdigest() and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKey, sig=signature, clientData=h1.hexdigest()):
+        if h1.hexdigest() == h2.hexdigest() and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
                 cls.timers[body["username"]].cancel()
 
@@ -198,23 +208,38 @@ class Handler:
                 return
         cls.credentials[username]["timedOut"] = True
 
-
+    @staticmethod
+    def coeffsToPolynomial(coeffs):
+        if coeffs.size>1:
+            poly = []
+            for c in coeffs:
+                poly.append(Polynomial(c))
+            return np.array(poly)
+        return Polynomial(coeffs)
+    
+    @staticmethod
+    def polynomialToCoeffs(poly):
+        coeffs = []
+        for p in poly:
+            coeffs.append(list(p.coef))
+        return coeffs
+       
     @classmethod
     def handleRegisterResponse(cls, body):
         cls.isActive[body["username"]]["R"] = False
         h = sha256()
         h.update(cls.RPID.encode())
         h.update(cls.credentials[body["username"]]["challenge"].encode())
-
+    
         pubKey = {
-            "t": np.array(json.loads(body["public_key_t"]), dtype=int),
-            "seed": int(body["public_key_seed"])
+            "t": Handler.coeffsToPolynomial(np.array(json.loads(body["public_key_t"]), dtype=int)),
+            "seedVector": np.array(json.loads(body["public_key_seed"]), dtype=int)
         }
         signature = {
-            "w": np.array(json.loads(body["w"]), dtype=int),
-            "c": int(body["c"]),
-            "z1": np.array(json.loads(body["z1"]), dtype=int),
-            "z2": np.array(json.loads(body["z2"]), dtype=int)
+            "w": Handler.coeffsToPolynomial(np.array(json.loads(body["w"]), dtype=int)),
+            "c": str(body["c"]),
+            "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
+            "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
         }
 
         if h.hexdigest() == body["client_data"] and Handler.verifySig(pubKey=pubKey, sig=signature, clientData=h.hexdigest()):
@@ -227,15 +252,21 @@ class Handler:
                         "authenticator_id":body["authenticator_id"],
                         "credential_id":body["credential_id"],
                         "pubKey":{
-                            "t": pubKey["t"].tobytes(),
-                            "seed": pubKey["seed"]
+                            "t": Handler.polynomialToCoeffs(pubKey["t"]),
+                            "seedVector": pubKey["seedVector"].tolist()
                         }
                     }
                     cursor = cls.credentialCollection.insert_one(doc)
                     print(str(cursor.inserted_id)+" added to credential collection")
                     cls.credentials[body["username"]]["completed"] = True
                     cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
-                    cls.credentials[body["username"]]["A"]["pubKey"] = pubKey
+
+                    dictPubKey = {
+                        "t": np.array(json.loads(body["public_key_t"]), dtype=int),
+                        "seedVector": pubKey["seedVector"].tolist()
+                    }
+
+                    cls.credentials[body["username"]]["A"]["pubKey"] = dictPubKey
                     return json.dumps(body["username"]+" is now registered!")
                 cls.credentials.pop(body["username"], None)
                 return json.dumps({
@@ -264,30 +295,18 @@ class Handler:
         cls.isActive[body["username"]]["A"] = False
         return json.dumps("We have registered that "+body["username"]+" failed authentication")
     
-    @classmethod
-    def computeSignatureChallenge(cls, A, t, w, clientData):
-        shake = shake_128()
-        shake.update(A.tobytes())
-        shake.update(t.tobytes())
-        shake.update(w.tobytes())
-        shake.update(clientData.encode())
-        shakeInt = int(shake.hexdigest(2), 16)
-        if len(str(bin(shakeInt)))<=cls.SHAKElength+2:
-            computedC = int(bin(shakeInt)[2:], 2) - 2**(cls.SHAKElength-1)
-        else:
-            computedC = int(bin(shakeInt)[-cls.SHAKElength:], 2) - 2**(cls.SHAKElength-1)
-        
-        return computedC
-
 
     @classmethod
     def verifySig(cls, pubKey, sig, clientData):
-        seed = pubKey["seed"]
-        np.random.seed(seed)
+        seedVector = pubKey["seedVector"]
+        rng = np.random.default_rng(seedVector)
 
         startA = []
-        for i in range(cls.n):
-            startA.append(np.random.randint(0, cls.q, cls.m))
+        ACoeffs = []
+        for _ in range(cls.n):
+            startA.append(np.array([Polynomial(rng.integers(0, cls.q, cls.d)) for _ in range(cls.m)]))
+            for i in range(cls.m):
+                ACoeffs.append(startA[-1][i].coef)
         A = np.array(startA)
 
         t = pubKey["t"]
@@ -295,19 +314,42 @@ class Handler:
         z1 = sig["z1"]
         z2 = sig["z2"]
         c = sig["c"]
-        
-        computedC = cls.computeSignatureChallenge(A, t, w, clientData)
 
-        if computedC != c:
+        h = sha256()
+        h.update(np.array(ACoeffs).tobytes())
+        h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
+        h.update(np.array(Handler.polynomialToCoeffs(w)).tobytes())
+        h.update(clientData.encode())
+
+        if h.hexdigest() != c:
             print("Not the same challenge")
             return False
-        # Check length
-        if not np.maximum(z1.max(), abs(z1.min())) <= cls.gamma or not np.maximum(z2.max(), abs(z2.min())) <= cls.gamma:
-            print("z1 or z2 is not short...")
-            return False
-        if not np.array_equal((np.inner(A, z1) + z2 - c*t)%cls.q, w):
+        
+        cPoly = Polynomial(np.array([*bin(int(h.hexdigest(), 16))[2:]]).astype(int))
+        
+        ct = np.array([cPoly*p for p in t])
+        
+        r = np.inner(A, z1)+z2-ct
+        r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
+        if not np.array_equal(r, w):
             print("Signature is not equal...")
             return False
+        
+        max = cls.approxBeta
+        min = -cls.approxBeta
+        
+        concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
+        
+        for coeff in concatenatedList:
+            if coeff > max:
+                max = coeff
+            elif coeff < min:
+                min = coeff
+
+        if max > cls.approxBeta or min < -cls.approxBeta:
+            print("z1 or z2 not short...")
+            return False
+
         return True
     
 

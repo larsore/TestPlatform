@@ -178,4 +178,46 @@ class EventHandler {
         return message
     }
     
+    func testCrypto() {
+        let keypair = babyDilithium.generateKeyPair()
+        let credID = "id11"
+        let rpID = "rp id"
+        let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keypair.secretKey)!
+        
+        let sigBefore = babyDilithium.sign(sk: keypair.secretKey, message: "En random melding")
+        
+        
+        do {
+            try AccessKeychain.save(credentialID: credID,
+                                RPID: rpID,
+                                secretKey: encodedSecretKey)
+        } catch {
+            print(error)
+            return
+        }
+        print("Credentials saved to keychain")
+        
+        guard let data = AccessKeychain.get(
+            credentialID: credID,
+            RPID: rpID
+        ) else {
+            print("Failed to read secret key from keychain")
+            return
+        }
+        print("Correct secret key retrieved from keychain")
+        
+        guard let secretKey = try? JSONDecoder().decode(BabyDilithium.SecretKey.self, from: data) else {
+            print("Unable to decode secret key")
+            return
+        }
+        
+        let sigAfter = babyDilithium.sign(sk: secretKey, message: "En random melding")
+        
+        print(sigBefore)
+        print("------------------------------------------------------------------------------------")
+        print(sigAfter)
+        
+
+    }
+    
 }

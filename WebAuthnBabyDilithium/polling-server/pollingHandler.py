@@ -190,7 +190,6 @@ class Handler:
             return json.dumps({"success": "Timed Out"})
 
         cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
-
         if registerRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
             cls.responseToClient[registerRequest["authenticator_id"]] = {
                 "credential_id": registerRequest["credential_id"],

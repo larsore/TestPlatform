@@ -12,42 +12,41 @@ iPhoneClientUrl = ""
 def loadIpAndPara():
     file = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/ipAddrAndPara.txt", "r")
     parameters = {
+        "q": None,
+        "beta": None,
+        "d": None,
         "n": None,
         "m": None,
-        "q": None,
-        "gamma": None,
-        "eta": None,
-        "challengeLength": None
+        "gamma": None
     }
     for line in file:
         words = line.split("=")
         if words[0] == "url":
             macClientUrl = words[1]+":3000"
+        elif words[0] == "q":
+            parameters["q"] = int(words[1])
+        elif words[0] == "beta":
+            parameters["beta"] = int(words[1])
+        elif words[0] == "d":
+            parameters["d"] = int(words[1])
         elif words[0] == "n":
             parameters["n"] = int(words[1])
         elif words[0] == "m":
             parameters["m"] = int(words[1])
-        elif words[0] == "q":
-            parameters["q"] = int(words[1])
         elif words[0] == "gamma":
             parameters["gamma"] = int(words[1])
-        elif words[0] == "eta":
-            parameters["eta"] = int(words[1])
-        elif words[0] == "challengeLength":
-            parameters["challengeLength"] = int(words[1])
     for key in parameters.keys():
         if parameters[key] == None:
             return False
     if macClientUrl == "":
         return False
     responseHandler.setParameters(
+        q=parameters["q"], 
+        beta=parameters["beta"], 
+        d=parameters["d"], 
         n=parameters["n"], 
         m=parameters["m"], 
-        q=parameters["q"], 
-        gamma=parameters["gamma"], 
-        eta=parameters["eta"], 
-        challengeLength=parameters["challengeLength"])
-    print(parameters)
+        gamma=parameters["gamma"])
     return True
 
 

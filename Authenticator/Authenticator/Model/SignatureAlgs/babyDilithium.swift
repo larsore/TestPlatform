@@ -37,9 +37,9 @@ class BabyDilithium {
         
         PythonSupport.initialize()
         NumPySupport.sitePackagesURL.insertPythonPath()
-        np = Python.import("numpy")
-        os = Python.import("os")
-        hashlib = Python.import("hashlib")
+        self.np = Python.import("numpy")
+        self.os = Python.import("os")
+        self.hashlib = Python.import("hashlib")
         
         let fCoeffs = np.array([1] + Array(repeating: 0, count: (self.d - 2)) + [1])
         self.f = self.np.polynomial.Polynomial(fCoeffs)
@@ -48,11 +48,11 @@ class BabyDilithium {
     struct SecretKey: Encodable, Decodable {
         var s1Coeffs: [[Int]]
         var s2Coeffs: [[Int]]
-        var seed: Int
+        var seedVector: [Int]
     }
     
     struct PublicKey: Codable {
-        var seed: Int
+        var seedVector: [Int]
         var tCoeffs: [[Int]]
     }
     
@@ -64,17 +64,22 @@ class BabyDilithium {
     struct Signature: Encodable {
         var z1Coeffs: [[Int]]
         var z2Coeffs: [[Int]]
-        var cCoeffs: [Int]
+        var cHex: String
         var wCoeffs: [[Int]]
     }
     
-    private func getA(seed: PythonObject) -> PythonObject {
-        self.np.random.seed(seed)
+    struct Challenge {
+        var challengeHex: String
+        var challengePolynomial: PythonObject
+    }
+    
+    private func getA(seedVector: [Int]) -> PythonObject {
+        let rng = self.np.random.default_rng(seedVector)
         var startA: [PythonObject] = []
         for _ in 0..<self.n {
             var row: [PythonObject] = []
             for _ in 0..<self.m {
-                row.append(self.np.polynomial.Polynomial(self.np.random.randint(0, self.q, self.d)))
+                row.append(self.np.polynomial.Polynomial(rng.integers(0, self.q, self.d)))
             }
             startA.append(self.np.array(row))
         }
@@ -84,7 +89,7 @@ class BabyDilithium {
     private func getRandomPolynomial(maxNorm: Int, size: Int) -> PythonObject {
         var randomVector: [PythonObject] = []
         let length = 4096
-        let rand = os.urandom(length)
+        let rand = self.os.urandom(length)
         for i in 0..<length {
             randomVector.append(rand[i])
         }
@@ -99,7 +104,7 @@ class BabyDilithium {
     }
     
     private func getCoefficients(polyList: PythonObject) -> [[Int]] {
-        var res: [[Int]] = [[]]
+        var res: [[Int]] = []
         for i in 0..<Int(polyList.size)! {
             var coeffList: [Int] = []
             for k in 0..<Int(polyList[i].coef.size)! {
@@ -114,44 +119,89 @@ class BabyDilithium {
         let s1 = self.getRandomPolynomial(maxNorm: self.beta, size: self.m)
         let s2 = self.getRandomPolynomial(maxNorm: self.beta, size: self.n)
         
+        var seedVector: [Int] = []
+        let length = 4096
+        let rand = os.urandom(length)
+        for i in 0..<length {
+            seedVector.append(Int(rand[i])!)
+        }
         let sk = SecretKey(
             s1Coeffs: self.getCoefficients(polyList: s1),
             s2Coeffs: self.getCoefficients(polyList: s2),
-            seed: Int(Python.int(self.os.urandom(64).hex(), 16))!
+            seedVector: seedVector
         )
-        let A = self.getA(seed: Python.int(sk.seed))
-        var t = self.getLatticePoint(A: A, s: s1, e: s2)
-        
+        let A = self.getA(seedVector: sk.seedVector)
+        let t = self.getLatticePoint(A: A, s: s1, e: s2)
         let pk = PublicKey(
-            seed: sk.seed,
+            seedVector: sk.seedVector,
             tCoeffs: self.getCoefficients(polyList: t)
         )
-        
         return KeyPair(secretKey: sk, publicKey: pk)
     }
     
-    private func rejectionSampling(z: PythonObject) -> Bool {
-        return self.getCoefficients(polyList: z).flatMap { $0 }.map { abs($0) }.max()! <= self.approxBeta
-    }
-    
-    private static func convertToSwiftList(numpyArray: PythonObject) -> [Int] {
-        var list: [Int] = []
-        for i in 0..<Int(numpyArray.size)! {
-            list.append(Int(numpyArray[i])!)
+    private func rejectionSampling(z1: PythonObject, z2: PythonObject) -> Bool {
+        var max = self.approxBeta
+        var min = -self.approxBeta
+        
+        let concatenatedList = self.getCoefficients(polyList: z1) + self.getCoefficients(polyList: z2)
+        for l in concatenatedList {
+            if l.max()! > max {
+                max = l.max()!
+            }
+            if l.min()! < min {
+                min = l.min()!
+            }
         }
-        return list
+        
+        if max <= self.approxBeta && min >= -self.approxBeta {
+            return true
+        }
+        return false
+        
+        //return self.getCoefficients(polyList: z).flatMap { $0 }.map { abs($0) }.max()! <= self.approxBeta
     }
     
-    private func getChallenge(A: PythonObject, t: PythonObject, w: PythonObject, message: PythonObject) -> PythonObject {
+    private func getChallenge(A: PythonObject, t: PythonObject, w: PythonObject, message: PythonObject) -> Challenge {
         let h = self.hashlib.sha256()
-        h.update(A.tobytes())
-        h.update(t.tobytes())
-        h.update(w.tobytes())
+        var ACoeffs: [PythonObject] = []
+        for i in 0..<self.n {
+            for p in 0..<self.m {
+                ACoeffs.append(A[i][p].coef)
+            }
+        }
+        h.update(self.np.array(ACoeffs).tobytes())
+        print(self.np.array(ACoeffs))
+        var tCoeffs: [PythonObject] = []
+        for i in 0..<self.n {
+            tCoeffs.append(t[i].coef)
+        }
+        h.update(self.np.array(tCoeffs).tobytes())
+        print(self.np.array(tCoeffs))
+        var wCoeffs: [PythonObject] = []
+        for i in 0..<self.n {
+            wCoeffs.append(w[i].coef)
+        }
+        h.update(self.np.array(wCoeffs).tobytes())
+        print(self.np.array(wCoeffs))
         h.update(message)
         
-        let bits = String(Int(Python.int(h.hexdigest(), 16))!, radix: 2).map { String($0) }
+        let challengeHex = String(h.hexdigest())!
         
-        return self.np.polynomial.Polynomial(np.array(bits))
+        let bitString = String(Python.bin(Python.int(h.hexdigest(), 16)))!
+        var bits: [PythonObject] = []
+        
+        let index = bitString.index(bitString.startIndex, offsetBy: 2)
+        let bitStringArray = Array(bitString[index..<bitString.endIndex])
+        for bit in bitStringArray {
+            bits.append(Python.int(String(bit)))
+        }
+        
+        return Challenge(
+            challengeHex: challengeHex,
+            challengePolynomial: self.np.polynomial.Polynomial(np.array(bits))
+        )
+        
+        
     }
     
     private func coeffsToPolynomial(listOfCoeffs: [[Int]]) -> PythonObject {
@@ -165,9 +215,11 @@ class BabyDilithium {
     }
     
     private func getLatticePoint(A: PythonObject, s: PythonObject, e: PythonObject) -> PythonObject {
-        var res = self.np.inner(A, s)+e
+        let res = self.np.inner(A, s)+e
+        
         for i in 0..<Int(res.size)! {
-            res[i] = self.np.polynomial.Polynomial(self.np.mod((self.np.polynomial.Polynomial.divmod(res[i], self.f)[1]).coef, self.q))
+            let divmodRes = self.np.polynomial.polynomial.polydiv(res[i].coef, self.f.coef)[1]
+            res[i] = self.np.polynomial.Polynomial(self.np.mod(divmodRes, self.q))
         }
         return res
     }
@@ -175,48 +227,44 @@ class BabyDilithium {
     func sign(sk: SecretKey, message: String) -> Signature {
         let s1 = self.coeffsToPolynomial(listOfCoeffs: sk.s1Coeffs)
         let s2 = self.coeffsToPolynomial(listOfCoeffs: sk.s2Coeffs)
+
+        let A = self.getA(seedVector: sk.seedVector)
+        let t = self.getLatticePoint(A: A, s: s1, e: s2)
         
-        let A = self.getA(seed: Python.int(sk.seed))
-        var t = self.getLatticePoint(A: A, s: s1, e: s2)
         var k = 1
         while true {
             let y1 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.m)
             let y2 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.n)
             
-            var w = self.getLatticePoint(A: A, s: y1, e: y2)
-        
+            let w = self.getLatticePoint(A: A, s: y1, e: y2)
+            
             let c = self.getChallenge(A: A, t: t, w: w, message: Python.str(message).encode())
             
             var cs1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
-                cs1.append(self.np.inner(c, s1[i]))
+                cs1.append(self.np.inner(c.challengePolynomial, s1[i]))
             }
-            var z1 = self.np.array(cs1) + y1
+            let z1 = self.np.array(cs1) + y1
             for i in 0..<Int(z1.size)! {
-                z1[i] = self.np.polynomial.Polynomial((self.np.polynomial.Polynomial.divmod(z1[i], self.f)[1]).coef)
+                let divmodRes = self.np.polynomial.polynomial.polydiv(z1[i].coef, self.f.coef)[1]
+                z1[i] = self.np.polynomial.Polynomial(divmodRes)
             }
             
             var cs2: [PythonObject] = []
             for i in 0..<Int(s2.size)! {
-                cs2.append(self.np.inner(c, s2[i]))
+                cs2.append(self.np.inner(c.challengePolynomial, s2[i]))
             }
-            var z2 = self.np.array(cs2) + y2
+            let z2 = self.np.array(cs2) + y2
             for i in 0..<Int(z2.size)! {
-                z2[i] = self.np.polynomial.Polynomial((self.np.polynomial.Polynomial.divmod(z2[i], self.f)[1]).coef)
+                let divmodRes = self.np.polynomial.polynomial.polydiv(z2[i].coef, self.f.coef)[1]
+                z2[i] = self.np.polynomial.Polynomial(divmodRes)
             }
-            
-            if rejectionSampling(z: z1) && rejectionSampling(z: z2) {
+            if rejectionSampling(z1: z1, z2: z2) {
                 print("Success at attempt number "+String(k))
-                
-                var cCoeffs: [Int] = []
-                for i in 0..<Int(c.coef.size)! {
-                    cCoeffs.append(Int(c.coef[i])!)
-                }
-                
                 return Signature(
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
-                    cCoeffs: cCoeffs,
+                    cHex: c.challengeHex,
                     wCoeffs: self.getCoefficients(polyList: w))
             }
             print("\(k) rejections")

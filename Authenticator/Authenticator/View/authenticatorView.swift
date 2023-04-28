@@ -59,6 +59,7 @@ struct authenticatorView: View {
                 Button("Device ID") {
                     showDeviceID = true
                     showCheckMark = false
+                    //eventHandler?.testCrypto()
                 }
                 .buttonStyle(GrowingButton())
                 .padding(20)
