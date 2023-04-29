@@ -265,7 +265,8 @@ class BabyDilithium {
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
                     cHex: c.challengeHex,
-                    wCoeffs: self.getCoefficients(polyList: w))
+                    wCoeffs: self.getCoefficients(polyList: w)
+                )
             }
             print("\(k) rejections")
             k += 1

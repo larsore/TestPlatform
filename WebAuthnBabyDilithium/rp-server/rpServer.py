@@ -23,6 +23,9 @@ def loadIpAndPara():
         words = line.split("=")
         if words[0] == "url":
             macClientUrl = words[1]+":3000"
+            f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+            f.write(words[1])
+            f.close()
         elif words[0] == "q":
             parameters["q"] = int(words[1])
         elif words[0] == "beta":
@@ -35,6 +38,7 @@ def loadIpAndPara():
             parameters["m"] = int(words[1])
         elif words[0] == "gamma":
             parameters["gamma"] = int(words[1])
+    file.close()
     for key in parameters.keys():
         if parameters[key] == None:
             return False

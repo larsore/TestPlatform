@@ -15,6 +15,9 @@ def loadIp():
         words = line.split("=")
         if words[0] == "url":
             macClientUrl = words[1]+":3000"
+            f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+            f.write(words[1])
+            f.close()
             return True
     return False
     
