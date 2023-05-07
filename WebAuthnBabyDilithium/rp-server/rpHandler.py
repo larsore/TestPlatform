@@ -3,7 +3,7 @@ import os
 import numpy as np
 from numpy.polynomial import Polynomial
 import json
-from hashlib import sha256, shake_128
+from hashlib import sha256, shake_256
 from threading import Timer
 
 
@@ -16,7 +16,9 @@ class Handler:
     m = None
     gamma = None 
     approxBeta = None 
-    f = None  
+    hashSize = None
+    f = None 
+    ballSize = None 
     
     credentials = {}
     isActive = {}
@@ -53,13 +55,15 @@ class Handler:
             print(key, cls.credentials[key]["authenticator_id"])
         
     @classmethod
-    def setParameters(cls, q, beta, d, n, m, gamma):
+    def setParameters(cls, q, beta, d, n, m, gamma, hashSize, ballSize):
         cls.q = q
         cls.beta = beta
         cls.d = d
         cls.n = n
         cls.m = m
         cls.gamma = gamma
+        cls.hashSize = hashSize
+        cls.ballSize = ballSize
         cls.approxBeta = int((q-1)/16)
         fCoeff = np.array([1]+[0]*(d-2)+[1])
         cls.f = np.polynomial.Polynomial(fCoeff)
@@ -295,6 +299,30 @@ class Handler:
         cls.isActive[body["username"]]["A"] = False
         return json.dumps("We have registered that "+body["username"]+" failed authentication")
     
+    @classmethod
+    def hashToBall(cls, shake):
+        cCoeffs = np.zeros(256, dtype=int)
+        s = ""
+        h = shake.digest(cls.hashSize)
+        k = 0
+        while True:
+            s+=(bin(h[k])[2:])
+            k+=1
+            if len(s) >= cls.ballSize:
+                break
+
+        taken = []
+        start = 196
+        for i in range(start, 256):
+            j = 257
+            while j > i:
+                j = h[k]
+                k+=1
+            taken.append(j)
+            cCoeffs[i] = cCoeffs[j]
+            cCoeffs[j] = (-1)**int(s[i-start])
+        
+        return cCoeffs
 
     @classmethod
     def verifySig(cls, pubKey, sig, clientData):
@@ -315,17 +343,17 @@ class Handler:
         z2 = sig["z2"]
         c = sig["c"]
 
-        h = sha256()
+        h = shake_256()
         h.update(np.array(ACoeffs).tobytes())
         h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
         h.update(np.array(Handler.polynomialToCoeffs(w)).tobytes())
         h.update(clientData.encode())
 
-        if h.hexdigest() != c:
+        if h.hexdigest(cls.hashSize) != c:
             print("Not the same challenge")
             return False
         
-        cPoly = Polynomial(np.array([*bin(int(h.hexdigest(), 16))[2:]]).astype(int))
+        cPoly = Polynomial(cls.hashToBall(h))
         
         ct = np.array([cPoly*p for p in t])
         

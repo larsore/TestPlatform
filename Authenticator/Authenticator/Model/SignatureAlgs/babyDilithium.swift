@@ -22,17 +22,21 @@ class BabyDilithium {
     private let n: Int
     private let m: Int
     private let gamma: Int
+    private let hashSize: Int
+    private let ballSize: Int
     private let approxBeta: Int
     
     private let f: PythonObject
         
-    init(q: Int, beta: Int, d: Int, n: Int, m: Int, gamma: Int) {
+    init(q: Int, beta: Int, d: Int, n: Int, m: Int, gamma: Int, hashSize: Int, ballSize: Int) {
         self.q = q
         self.beta = beta
         self.d = d
         self.n = n
         self.m = m
         self.gamma = gamma
+        self.hashSize = hashSize
+        self.ballSize = ballSize
         self.approxBeta = Int((q-1)/16)
         
         PythonSupport.initialize()
@@ -158,11 +162,44 @@ class BabyDilithium {
         }
         return false
         
-        //return self.getCoefficients(polyList: z).flatMap { $0 }.map { abs($0) }.max()! <= self.approxBeta
+    }
+    
+    private func hashToBall(shake: PythonObject) -> PythonObject {
+        let cCoeffs = self.np.zeros(256)
+        var sString = ""
+        let h = shake.digest(self.hashSize)
+        var k = 0
+        while true {
+            sString += String(Python.bin(Python.int(h[k])))!
+            k += 1
+            if sString.count >= self.ballSize+2 {
+                break
+            }
+        }
+        var s: [Int] = []
+        let index = sString.index(sString.startIndex, offsetBy: 2)
+        let sArray = Array(sString[index..<sString.endIndex])
+        for bit in sArray {
+            s.append(Int(String(bit))!)
+        }
+        
+        var taken: [Int] = []
+        let start = 196
+        for i in start..<256 {
+            var j = 257
+            while j > i {
+                j = Int(h[k])!
+                k += 1
+            }
+            taken.append(j)
+            cCoeffs[i] = cCoeffs[j]
+            cCoeffs[j] = Python.int(pow(-1.0, Double(s[i-start])))
+        }
+        return cCoeffs
     }
     
     private func getChallenge(A: PythonObject, t: PythonObject, w: PythonObject, message: PythonObject) -> Challenge {
-        let h = self.hashlib.sha256()
+        let h = self.hashlib.shake_256()
         var ACoeffs: [PythonObject] = []
         for i in 0..<self.n {
             for p in 0..<self.m {
@@ -170,38 +207,24 @@ class BabyDilithium {
             }
         }
         h.update(self.np.array(ACoeffs).tobytes())
-        print(self.np.array(ACoeffs))
         var tCoeffs: [PythonObject] = []
         for i in 0..<self.n {
             tCoeffs.append(t[i].coef)
         }
         h.update(self.np.array(tCoeffs).tobytes())
-        print(self.np.array(tCoeffs))
         var wCoeffs: [PythonObject] = []
         for i in 0..<self.n {
             wCoeffs.append(w[i].coef)
         }
         h.update(self.np.array(wCoeffs).tobytes())
-        print(self.np.array(wCoeffs))
         h.update(message)
         
-        let challengeHex = String(h.hexdigest())!
-        
-        let bitString = String(Python.bin(Python.int(h.hexdigest(), 16)))!
-        var bits: [PythonObject] = []
-        
-        let index = bitString.index(bitString.startIndex, offsetBy: 2)
-        let bitStringArray = Array(bitString[index..<bitString.endIndex])
-        for bit in bitStringArray {
-            bits.append(Python.int(String(bit)))
-        }
+        let challengeHex = String(h.hexdigest(self.hashSize))!
         
         return Challenge(
             challengeHex: challengeHex,
-            challengePolynomial: self.np.polynomial.Polynomial(np.array(bits))
+            challengePolynomial: self.np.polynomial.Polynomial(self.hashToBall(shake: h))
         )
-        
-        
     }
     
     private func coeffsToPolynomial(listOfCoeffs: [[Int]]) -> PythonObject {

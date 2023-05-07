@@ -28,7 +28,9 @@ class EventHandler {
             d: ipAddrAndPara.d,
             n: ipAddrAndPara.n,
             m: ipAddrAndPara.m,
-            gamma: ipAddrAndPara.gamma
+            gamma: ipAddrAndPara.gamma,
+            hashSize: ipAddrAndPara.hashSize,
+            ballSize: ipAddrAndPara.ballSize
         )
         
         self.hashlib = Python.import("hashlib")
@@ -49,12 +51,14 @@ class EventHandler {
         var n: Int
         var m: Int
         var gamma: Int
+        var hashSize: Int
+        var ballSize: Int
         var pollingUrl: String
     }
     
     private static func readIpAndPara(filename: String, fileEnding: String) -> PollingAddressAndParameters? {
     
-        var pollingAddressAndParameters = PollingAddressAndParameters(q: 0, beta: 0, d: 0, n: 0, m: 0, gamma: 0, pollingUrl: "")
+        var pollingAddressAndParameters = PollingAddressAndParameters(q: 0, beta: 0, d: 0, n: 0, m: 0, gamma: 0, hashSize: 0, ballSize: 0, pollingUrl: "")
         
         var lines = [String]()
         if let fileUrl = Bundle.main.url(forResource: filename, withExtension: fileEnding) {
@@ -82,9 +86,13 @@ class EventHandler {
                 pollingAddressAndParameters.m = Int(words[1])!
             } else if words[0] == "gamma" {
                 pollingAddressAndParameters.gamma = Int(words[1])!
+            } else if words[0] == "hashSize" {
+                pollingAddressAndParameters.hashSize = Int(words[1])!
+            } else if words[0] == "ballSize" {
+                pollingAddressAndParameters.ballSize = Int(words[1])!
             }
         }
-        if pollingAddressAndParameters.q == 0 || pollingAddressAndParameters.beta == 0 || pollingAddressAndParameters.d == 0 || pollingAddressAndParameters.n == 0 || pollingAddressAndParameters.m == 0 || pollingAddressAndParameters.gamma == 0 || pollingAddressAndParameters.pollingUrl == "" {
+        if pollingAddressAndParameters.q == 0 || pollingAddressAndParameters.beta == 0 || pollingAddressAndParameters.d == 0 || pollingAddressAndParameters.n == 0 || pollingAddressAndParameters.m == 0 || pollingAddressAndParameters.gamma == 0 || pollingAddressAndParameters.hashSize == 0 || pollingAddressAndParameters.ballSize == 0 || pollingAddressAndParameters.pollingUrl == "" {
             print("Not all values read correctly from text-file...")
             return nil
         }
