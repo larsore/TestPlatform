@@ -166,21 +166,20 @@ class BabyDilithium {
     
     private func hashToBall(shake: PythonObject) -> PythonObject {
         let cCoeffs = self.np.zeros(256)
-        var sString = ""
         let h = shake.digest(self.hashSize)
         var k = 0
+        var s: [Int] = []
         while true {
-            sString += String(Python.bin(Python.int(h[k])))!
+            var byteString = String(Python.bin(Python.int(h[k])))!
+            let index = byteString.index(byteString.startIndex, offsetBy: 2)
+            let byteArray = Array(byteString[index..<byteString.endIndex])
+            for bit in byteArray {
+                s.append(Int(String(bit))!)
+            }
             k += 1
-            if sString.count >= self.ballSize+2 {
+            if s.count >= self.ballSize {
                 break
             }
-        }
-        var s: [Int] = []
-        let index = sString.index(sString.startIndex, offsetBy: 2)
-        let sArray = Array(sString[index..<sString.endIndex])
-        for bit in sArray {
-            s.append(Int(String(bit))!)
         }
         
         var taken: [Int] = []
@@ -188,7 +187,9 @@ class BabyDilithium {
         for i in start..<256 {
             var j = 257
             while j > i {
-                j = Int(h[k])!
+                if !taken.contains(Int(h[k])!) {
+                    j = Int(h[k])!
+                }
                 k += 1
             }
             taken.append(j)
@@ -219,7 +220,7 @@ class BabyDilithium {
         h.update(self.np.array(wCoeffs).tobytes())
         h.update(message)
         
-        let challengeHex = String(h.hexdigest(self.hashSize))!
+        let challengeHex = String(h.hexdigest(17))!
         
         return Challenge(
             challengeHex: challengeHex,

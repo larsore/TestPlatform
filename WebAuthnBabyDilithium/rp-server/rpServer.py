@@ -56,9 +56,10 @@ def loadIpAndPara():
         d=parameters["d"], 
         n=parameters["n"], 
         m=parameters["m"], 
-        gamma=parameters["gamma"]),
+        gamma=parameters["gamma"],
         hashSize=parameters["hashSize"],
         ballSize=parameters["ballSize"]
+        )
     return True
 
 

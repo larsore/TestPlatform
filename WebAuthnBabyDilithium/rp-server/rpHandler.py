@@ -316,7 +316,8 @@ class Handler:
         for i in range(start, 256):
             j = 257
             while j > i:
-                j = h[k]
+                if h[k] not in taken:
+                    j = h[k]
                 k+=1
             taken.append(j)
             cCoeffs[i] = cCoeffs[j]
@@ -349,7 +350,7 @@ class Handler:
         h.update(np.array(Handler.polynomialToCoeffs(w)).tobytes())
         h.update(clientData.encode())
 
-        if h.hexdigest(cls.hashSize) != c:
+        if h.hexdigest(17) != c:
             print("Not the same challenge")
             return False
         
