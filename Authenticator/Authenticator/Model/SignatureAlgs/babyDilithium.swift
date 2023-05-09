@@ -69,7 +69,7 @@ class BabyDilithium {
         var z1Coeffs: [[Int]]
         var z2Coeffs: [[Int]]
         var cHex: String
-        var wCoeffs: [[Int]]
+        var omega: String
     }
     
     struct Challenge {
@@ -170,7 +170,7 @@ class BabyDilithium {
         var k = 0
         var s: [Int] = []
         while true {
-            var byteString = String(Python.bin(Python.int(h[k])))!
+            let byteString = String(Python.bin(Python.int(h[k])))!
             let index = byteString.index(byteString.startIndex, offsetBy: 2)
             let byteArray = Array(byteString[index..<byteString.endIndex])
             for bit in byteArray {
@@ -199,7 +199,7 @@ class BabyDilithium {
         return cCoeffs
     }
     
-    private func getChallenge(A: PythonObject, t: PythonObject, w: PythonObject, message: PythonObject) -> Challenge {
+    private func getChallenge(A: PythonObject, t: PythonObject, omega: PythonObject, message: PythonObject) -> Challenge {
         let h = self.hashlib.shake_256()
         var ACoeffs: [PythonObject] = []
         for i in 0..<self.n {
@@ -213,11 +213,7 @@ class BabyDilithium {
             tCoeffs.append(t[i].coef)
         }
         h.update(self.np.array(tCoeffs).tobytes())
-        var wCoeffs: [PythonObject] = []
-        for i in 0..<self.n {
-            wCoeffs.append(w[i].coef)
-        }
-        h.update(self.np.array(wCoeffs).tobytes())
+        h.update(omega)
         h.update(message)
         
         let challengeHex = String(h.hexdigest(17))!
@@ -261,9 +257,11 @@ class BabyDilithium {
             let y2 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
+            let omega = self.hashlib.sha256()
+            omega.update(self.np.array(self.getCoefficients(polyList: w)).tobytes())
             
-            let c = self.getChallenge(A: A, t: t, w: w, message: Python.str(message).encode())
-            
+            let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest().encode(), message: Python.str(message).encode())
+
             var cs1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
                 cs1.append(self.np.inner(c.challengePolynomial, s1[i]))
@@ -289,7 +287,7 @@ class BabyDilithium {
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
                     cHex: c.challengeHex,
-                    wCoeffs: self.getCoefficients(polyList: w)
+                    omega: String(omega.hexdigest())!
                 )
             }
             print("\(k) rejections")

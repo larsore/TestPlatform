@@ -79,7 +79,7 @@ def authenticatorRegister():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["credential_id", "public_key_t", "public_key_seed", "client_data", "rp_id", "authenticator_id", "w", "z1", "z2", "c"]
+    requiredKeys = ["credential_id", "public_key_t", "public_key_seed", "client_data", "rp_id", "authenticator_id", "omega", "z1", "z2", "c"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorRegister(body)
@@ -102,7 +102,7 @@ def authenticatorAuthenticate():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_data", "w", "z1", "z2", "c", "authenticator_id"]
+    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)

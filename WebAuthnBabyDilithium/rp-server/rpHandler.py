@@ -83,7 +83,9 @@ class Handler:
             "d": cls.d,
             "n": cls.n,
             "m": cls.m,
-            "gamma": cls.gamma 
+            "gamma": cls.gamma,
+            "hashSize": cls.hashSize,
+            "ballSize": cls.ballSize
         }
     
     @classmethod
@@ -135,7 +137,7 @@ class Handler:
         }
         
         signature = {
-            "w": Handler.coeffsToPolynomial(np.array(json.loads(body["w"]), dtype=int)),
+            "omega": str(body["omega"]),
             "c": str(body["c"]),
             "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
             "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
@@ -240,7 +242,7 @@ class Handler:
             "seedVector": np.array(json.loads(body["public_key_seed"]), dtype=int)
         }
         signature = {
-            "w": Handler.coeffsToPolynomial(np.array(json.loads(body["w"]), dtype=int)),
+            "omega": str(body["omega"]),
             "c": str(body["c"]),
             "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
             "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
@@ -339,7 +341,7 @@ class Handler:
         A = np.array(startA)
 
         t = pubKey["t"]
-        w = sig["w"]
+        omega = sig["omega"]
         z1 = sig["z1"]
         z2 = sig["z2"]
         c = sig["c"]
@@ -347,7 +349,7 @@ class Handler:
         h = shake_256()
         h.update(np.array(ACoeffs).tobytes())
         h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
-        h.update(np.array(Handler.polynomialToCoeffs(w)).tobytes())
+        h.update(omega.encode())
         h.update(clientData.encode())
 
         if h.hexdigest(17) != c:
@@ -355,12 +357,13 @@ class Handler:
             return False
         
         cPoly = Polynomial(cls.hashToBall(h))
-        
+
         ct = np.array([cPoly*p for p in t])
         
         r = np.inner(A, z1)+z2-ct
         r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
-        if not np.array_equal(r, w):
+
+        if not sha256(np.array(Handler.polynomialToCoeffs(r), dtype=int).tobytes()).hexdigest() == omega:
             print("Signature is not equal...")
             return False
         

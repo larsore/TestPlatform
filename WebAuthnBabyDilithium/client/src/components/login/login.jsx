@@ -100,7 +100,7 @@ export class Login extends React.Component {
             Login.changeLabel("authenticatorResponse", pollingData);
             return
         }
-        Login.changeLabel("authenticatorResponse", "Recieved public key and other things from authenticator")
+        Login.changeLabel("authenticatorResponse", "Recieved signature from authenticator")
         
         const RPresponseOptions = {
             method: 'POST',
@@ -108,7 +108,7 @@ export class Login extends React.Component {
             body: JSON.stringify({ 
                 "username": username,
                 "authenticator_data": pollingData["authenticator_data"],
-                "w": pollingData["w"],
+                "omega": pollingData["omega"],
                 "c": pollingData["c"],
                 "z1": pollingData["z1"],
                 "z2": pollingData["z2"],

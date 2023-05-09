@@ -88,7 +88,7 @@ class CommunicateWithServer {
             "client_data":clientData,
             "rp_id":RP_ID,
             "authenticator_id":hashedDeviceID,
-            "w":signature.wCoeffs,
+            "omega":signature.omega,
             "z1":signature.z1Coeffs,
             "z2":signature.z2Coeffs,
             "c":signature.cHex
@@ -114,7 +114,7 @@ class CommunicateWithServer {
         }
         let body: [String: Any] = [
             "authenticator_data":authenticatorData,
-            "w":signature.wCoeffs,
+            "omega":signature.omega,
             "z1":signature.z1Coeffs,
             "z2":signature.z2Coeffs,
             "c":signature.cHex,

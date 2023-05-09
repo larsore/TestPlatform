@@ -115,7 +115,7 @@ export class Register extends React.Component {
                 "public_key_seed": pollingData["public_key_seed"],
                 "client_data": pollingData["client_data"],
                 "authenticator_id": pollingData["authenticator_id"],
-                "w": pollingData["w"],
+                "omega": pollingData["omega"],
                 "c": pollingData["c"],
                 "z1": pollingData["z1"],
                 "z2": pollingData["z2"]

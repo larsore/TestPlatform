@@ -197,7 +197,7 @@ class Handler:
                 "public_key_seed": registerRequest["public_key_seed"],
                 "client_data": registerRequest["client_data"],
                 "authenticator_id": registerRequest["authenticator_id"],
-                "w": registerRequest["w"],
+                "omega": registerRequest["omega"],
                 "z1": registerRequest["z1"],
                 "z2": registerRequest["z2"],
                 "c": registerRequest["c"]
@@ -229,7 +229,7 @@ class Handler:
         if authenticateRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
             cls.responseToClient[authenticateRequest["authenticator_id"]] = {
                 "authenticator_data": authenticateRequest["authenticator_data"],
-                "w": authenticateRequest["w"],
+                "omega": authenticateRequest["omega"],
                 "c": authenticateRequest["c"],
                 "z1": authenticateRequest["z1"],
                 "z2": authenticateRequest["z2"]
