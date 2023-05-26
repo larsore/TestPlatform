@@ -18,8 +18,7 @@ def loadIpAndPara():
         "n": None,
         "m": None,
         "gamma": None,
-        "hashSize": None,
-        "ballSize": None
+        "eta": None
     }
     for line in file:
         words = line.split("=")
@@ -40,10 +39,8 @@ def loadIpAndPara():
             parameters["m"] = int(words[1])
         elif words[0] == "gamma":
             parameters["gamma"] = int(words[1])
-        elif words[0] == "hashSize":
-            parameters["hashSize"] = int(words[1])
-        elif words[0] == "ballSize":
-            parameters["ballSize"] = int(words[1])
+        elif words[0] == "eta":
+            parameters["eta"] = int(words[1])
     file.close()
     for key in parameters.keys():
         if parameters[key] == None:
@@ -57,8 +54,7 @@ def loadIpAndPara():
         n=parameters["n"], 
         m=parameters["m"], 
         gamma=parameters["gamma"],
-        hashSize=parameters["hashSize"],
-        ballSize=parameters["ballSize"]
+        eta=parameters["eta"]
         )
     return True
 

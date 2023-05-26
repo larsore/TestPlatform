@@ -16,9 +16,8 @@ class Handler:
     m = None
     gamma = None 
     approxBeta = None 
-    hashSize = None
     f = None 
-    ballSize = None 
+    eta = None 
     
     credentials = {}
     isActive = {}
@@ -55,15 +54,14 @@ class Handler:
             print(key, cls.credentials[key]["authenticator_id"])
         
     @classmethod
-    def setParameters(cls, q, beta, d, n, m, gamma, hashSize, ballSize):
+    def setParameters(cls, q, beta, d, n, m, gamma, eta):
         cls.q = q
         cls.beta = beta
         cls.d = d
         cls.n = n
         cls.m = m
         cls.gamma = gamma
-        cls.hashSize = hashSize
-        cls.ballSize = ballSize
+        cls.eta = eta
         cls.approxBeta = int((q-1)/16)
         fCoeff = np.array([1]+[0]*(d-2)+[1])
         cls.f = np.polynomial.Polynomial(fCoeff)
@@ -84,8 +82,7 @@ class Handler:
             "n": cls.n,
             "m": cls.m,
             "gamma": cls.gamma,
-            "hashSize": cls.hashSize,
-            "ballSize": cls.ballSize
+            "eta": cls.eta
         }
     
     @classmethod
@@ -305,12 +302,11 @@ class Handler:
     def hashToBall(cls, shake):
         cCoeffs = np.zeros(256, dtype=int)
         s = ""
-        h = shake.digest(cls.hashSize)
         k = 0
         while True:
-            s+=(bin(h[k])[2:])
+            s+=(bin(shake.digest(k+1)[k])[2:])
             k+=1
-            if len(s) >= cls.ballSize:
+            if len(s) >= cls.eta:
                 break
 
         taken = []
@@ -318,8 +314,9 @@ class Handler:
         for i in range(start, 256):
             j = 257
             while j > i:
-                if h[k] not in taken:
-                    j = h[k]
+                candidate = shake.digest(k+1)[k]
+                if candidate not in taken:
+                    j = candidate
                 k+=1
             taken.append(j)
             cCoeffs[i] = cCoeffs[j]
@@ -363,7 +360,7 @@ class Handler:
         r = np.inner(A, z1)+z2-ct
         r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
 
-        if not sha256(np.array(Handler.polynomialToCoeffs(r), dtype=int).tobytes()).hexdigest() == omega:
+        if not shake_256(np.array(Handler.polynomialToCoeffs(r), dtype=int).tobytes()).hexdigest(48) == omega:
             print("Signature is not equal...")
             return False
         

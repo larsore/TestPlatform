@@ -22,21 +22,19 @@ class BabyDilithium {
     private let n: Int
     private let m: Int
     private let gamma: Int
-    private let hashSize: Int
-    private let ballSize: Int
+    private let eta: Int
     private let approxBeta: Int
     
     private let f: PythonObject
         
-    init(q: Int, beta: Int, d: Int, n: Int, m: Int, gamma: Int, hashSize: Int, ballSize: Int) {
+    init(q: Int, beta: Int, d: Int, n: Int, m: Int, gamma: Int, eta: Int) {
         self.q = q
         self.beta = beta
         self.d = d
         self.n = n
         self.m = m
         self.gamma = gamma
-        self.hashSize = hashSize
-        self.ballSize = ballSize
+        self.eta = eta
         self.approxBeta = Int((q-1)/16)
         
         PythonSupport.initialize()
@@ -166,18 +164,17 @@ class BabyDilithium {
     
     private func hashToBall(shake: PythonObject) -> PythonObject {
         let cCoeffs = self.np.zeros(256)
-        let h = shake.digest(self.hashSize)
         var k = 0
         var s: [Int] = []
         while true {
-            let byteString = String(Python.bin(Python.int(h[k])))!
+            let byteString = String(Python.bin(Python.int(shake.digest(k+1)[k])))!
             let index = byteString.index(byteString.startIndex, offsetBy: 2)
             let byteArray = Array(byteString[index..<byteString.endIndex])
             for bit in byteArray {
                 s.append(Int(String(bit))!)
             }
             k += 1
-            if s.count >= self.ballSize {
+            if s.count >= self.eta {
                 break
             }
         }
@@ -187,8 +184,8 @@ class BabyDilithium {
         for i in start..<256 {
             var j = 257
             while j > i {
-                if !taken.contains(Int(h[k])!) {
-                    j = Int(h[k])!
+                if !taken.contains(Int(shake.digest(k+1)[k])!) {
+                    j = Int(shake.digest(k+1)[k])!
                 }
                 k += 1
             }
@@ -257,10 +254,10 @@ class BabyDilithium {
             let y2 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
-            let omega = self.hashlib.sha256()
+            let omega = self.hashlib.shake_256()
             omega.update(self.np.array(self.getCoefficients(polyList: w)).tobytes())
             
-            let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest().encode(), message: Python.str(message).encode())
+            let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
 
             var cs1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
@@ -287,7 +284,7 @@ class BabyDilithium {
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
                     cHex: c.challengeHex,
-                    omega: String(omega.hexdigest())!
+                    omega: String(omega.hexdigest(48))!
                 )
             }
             print("\(k) rejections")

@@ -5,5 +5,4 @@ d=256
 n=5
 m=4
 gamma=275
-hashSize=1000
-ballSize=60
+eta=60
