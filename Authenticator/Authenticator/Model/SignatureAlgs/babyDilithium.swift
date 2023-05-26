@@ -216,7 +216,7 @@ class BabyDilithium {
         h.update(omega)
         h.update(message)
         
-        let challengeHex = String(h.hexdigest(17))!
+        let challengeHex = String(h.hexdigest(48))!
         
         return Challenge(
             challengeHex: challengeHex,

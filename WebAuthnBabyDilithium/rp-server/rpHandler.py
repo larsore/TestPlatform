@@ -352,7 +352,7 @@ class Handler:
         h.update(omega.encode())
         h.update(clientData.encode())
 
-        if h.hexdigest(17) != c:
+        if h.hexdigest(48) != c:
             print("Not the same challenge")
             return False
         
