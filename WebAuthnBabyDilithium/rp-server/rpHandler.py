@@ -307,7 +307,9 @@ class Handler:
             row = []
             for _ in range(cls.m):
                 coefs = []
+                repr = 0
                 while len(coefs) < cls.d:
+                    h.update(str(repr).encode())
                     sample = h.digest(k+3)
                     b0 = int(bin(sample[k]), 2)
                     b1 = int(bin(sample[k+1]), 2)
@@ -315,6 +317,7 @@ class Handler:
                     candid = b2mark*2**(16)+b1*2**(8)+b0
                     if candid < cls.q:
                         coefs.append(candid)
+                        repr += 1
                     k+=3
                 row.append(Polynomial(coefs))
             A.append(row)
