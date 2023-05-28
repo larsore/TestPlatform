@@ -32,7 +32,7 @@ export class Register extends React.Component {
         document.getElementById('RPfinalResponse').innerHTML = "";
 
         const username = Register.username;
-        const authID = Register.authID;//"AE52A450-7A4A-461E-9EEA-3AB71F019DAD"
+        const authID = Register.authID;
 
         if (username === "" || authID === "") {
             console.log("Empty username and/or authID...");
@@ -54,8 +54,6 @@ export class Register extends React.Component {
         const RPresponse = await fetch(Register.RPUrl+'/register', RPrequestOptions);
         const RPdata = await RPresponse.json();
         console.log(RPdata)
-        // TODO: Compare HTTP Origin with RP_ID
-        //console.log(response.headers.get("Origin"));
 
         if (typeof RPdata === 'string') {
             Register.changeLabel("RPregResponse", RPdata)

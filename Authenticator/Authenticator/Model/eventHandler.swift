@@ -183,7 +183,8 @@ class EventHandler {
     }
     
     func testCrypto() {
-        let keypair = babyDilithium.generateKeyPair()
+        let _ = babyDilithium.generateKeyPair()
+        /*
         let credID = "id11"
         let rpID = "rp id"
         let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keypair.secretKey)!
@@ -220,7 +221,7 @@ class EventHandler {
         print(sigBefore)
         print("------------------------------------------------------------------------------------")
         print(sigAfter)
-        
+        */
 
     }
     

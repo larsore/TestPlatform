@@ -84,7 +84,7 @@ class CommunicateWithServer {
         let body: [String: Any] = [
             "credential_id":credential_ID,
             "public_key_t":publicKey.tCoeffs,
-            "public_key_seed":publicKey.seedVector,
+            "public_key_seed":publicKey.Aseed,
             "client_data":clientData,
             "rp_id":RP_ID,
             "authenticator_id":hashedDeviceID,

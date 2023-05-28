@@ -50,11 +50,11 @@ class BabyDilithium {
     struct SecretKey: Encodable, Decodable {
         var s1Coeffs: [[Int]]
         var s2Coeffs: [[Int]]
-        var seedVector: [Int]
+        var Aseed: String
     }
     
     struct PublicKey: Codable {
-        var seedVector: [Int]
+        var Aseed: String
         var tCoeffs: [[Int]]
     }
     
@@ -75,17 +75,43 @@ class BabyDilithium {
         var challengePolynomial: PythonObject
     }
     
-    private func getA(seedVector: [Int]) -> PythonObject {
-        let rng = self.np.random.default_rng(seedVector)
-        var startA: [PythonObject] = []
+    private func expandA(seed: PythonObject) -> PythonObject {
+        let h = self.hashlib.shake_128(seed)
+        var A: [[PythonObject]] = []
+        var k = 0
         for _ in 0..<self.n {
             var row: [PythonObject] = []
             for _ in 0..<self.m {
-                row.append(self.np.polynomial.Polynomial(rng.integers(0, self.q, self.d)))
+                var coefs: [Int] = []
+                while coefs.count < 256 {
+                    let sample = h.digest(k+3)
+                    let b0 = Int(Python.int(Python.bin(sample[k]), 2))!
+                    let b1 = Int(Python.int(Python.bin(sample[k+1]), 2))!
+                    let b2string = String(Python.bin(sample[k+2]))!
+                    let index = b2string.index(b2string.startIndex, offsetBy: 2)
+                    var b2Array = Array(b2string[index..<b2string.endIndex])
+                    if b2Array.count < 8 {
+                        for _ in 0..<8-b2Array.count {
+                            b2Array.insert("0", at: 0)
+                        }
+                    } else {
+                        b2Array[0] = "0"
+                    }
+                    var b2Int = 0
+                    for i in 0..<b2Array.count {
+                        b2Int += Int(String(b2Array[i]))! * NSDecimalNumber(decimal: pow(2, b2Array.count - (i+1))).intValue
+                    }
+                    let candid = b2Int * NSDecimalNumber(decimal: pow(2, 16)).intValue + b1 * NSDecimalNumber(decimal: pow(2, 8)).intValue + b0
+                    if candid < self.q {
+                        coefs.append(candid)
+                    }
+                    k+=3
+                }
+                row.append(self.np.polynomial.Polynomial(coefs))
             }
-            startA.append(self.np.array(row))
+            A.append(row)
         }
-        return self.np.array(startA)
+        return self.np.array(A)
     }
     
     private func getRandomPolynomial(maxNorm: Int, size: Int) -> PythonObject {
@@ -121,21 +147,15 @@ class BabyDilithium {
         let s1 = self.getRandomPolynomial(maxNorm: self.beta, size: self.m)
         let s2 = self.getRandomPolynomial(maxNorm: self.beta, size: self.n)
         
-        var seedVector: [Int] = []
-        let length = 4096
-        let rand = os.urandom(length)
-        for i in 0..<length {
-            seedVector.append(Int(rand[i])!)
-        }
         let sk = SecretKey(
             s1Coeffs: self.getCoefficients(polyList: s1),
             s2Coeffs: self.getCoefficients(polyList: s2),
-            seedVector: seedVector
+            Aseed: String(self.os.urandom(32).hex())!
         )
-        let A = self.getA(seedVector: sk.seedVector)
+        let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
         let pk = PublicKey(
-            seedVector: sk.seedVector,
+            Aseed: sk.Aseed,
             tCoeffs: self.getCoefficients(polyList: t)
         )
         return KeyPair(secretKey: sk, publicKey: pk)
@@ -196,15 +216,9 @@ class BabyDilithium {
         return cCoeffs
     }
     
-    private func getChallenge(A: PythonObject, t: PythonObject, omega: PythonObject, message: PythonObject) -> Challenge {
+    private func getChallenge(Aseed: PythonObject, t: PythonObject, omega: PythonObject, message: PythonObject) -> Challenge {
         let h = self.hashlib.shake_256()
-        var ACoeffs: [PythonObject] = []
-        for i in 0..<self.n {
-            for p in 0..<self.m {
-                ACoeffs.append(A[i][p].coef)
-            }
-        }
-        h.update(self.np.array(ACoeffs).tobytes())
+        h.update(Aseed)
         var tCoeffs: [PythonObject] = []
         for i in 0..<self.n {
             tCoeffs.append(t[i].coef)
@@ -245,7 +259,7 @@ class BabyDilithium {
         let s1 = self.coeffsToPolynomial(listOfCoeffs: sk.s1Coeffs)
         let s2 = self.coeffsToPolynomial(listOfCoeffs: sk.s2Coeffs)
 
-        let A = self.getA(seedVector: sk.seedVector)
+        let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
         
         var k = 1
@@ -257,7 +271,7 @@ class BabyDilithium {
             let omega = self.hashlib.shake_256()
             omega.update(self.np.array(self.getCoefficients(polyList: w)).tobytes())
             
-            let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
+            let c = self.getChallenge(Aseed: Python.str(sk.Aseed).encode(), t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
 
             var cs1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
@@ -280,6 +294,10 @@ class BabyDilithium {
             }
             if rejectionSampling(z1: z1, z2: z2) {
                 print("Success at attempt number "+String(k))
+                var ct: [PythonObject] = []
+                for i in 0..<Int(t.size)! {
+                    ct.append(self.np.inner(c.challengePolynomial, t[i]))
+                }
                 return Signature(
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),

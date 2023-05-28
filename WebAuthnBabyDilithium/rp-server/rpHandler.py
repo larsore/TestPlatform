@@ -3,9 +3,8 @@ import os
 import numpy as np
 from numpy.polynomial import Polynomial
 import json
-from hashlib import sha256, shake_256
+from hashlib import sha256, shake_256, shake_128
 from threading import Timer
-
 
 class Handler:
 
@@ -21,12 +20,11 @@ class Handler:
     
     credentials = {}
     isActive = {}
+    timers = {}
+    timeout = 30 #sekunder
 
     RPName = "NTNU Master"
-    RPID = None
-
-    timeout = 30 #sekunder
-    timers = {}
+    RPID = "www.ntnu.no/masteroppgave"
 
     dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
     db = dbClient['FIDOServer']
@@ -50,6 +48,8 @@ class Handler:
                 "R": False,
                 "A": False
             }
+        print('-----'+'REGISTERED USERS'+'-----')
+        print('--'+'username'+'--'+'authenticator ID'+'--')
         for key in list(cls.credentials.keys()):
             print(key, cls.credentials[key]["authenticator_id"])
         
@@ -66,24 +66,9 @@ class Handler:
         fCoeff = np.array([1]+[0]*(d-2)+[1])
         cls.f = np.polynomial.Polynomial(fCoeff)
 
-
     @staticmethod
     def getChallenge():
         return os.urandom(64).hex()
-    
-
-    @classmethod
-    def getPublicKeyParams(cls):
-        return {
-            "algName": "BabyDilithium",
-            "q": cls.q,
-            "beta": cls.beta,
-            "d": cls.d,
-            "n": cls.n,
-            "m": cls.m,
-            "gamma": cls.gamma,
-            "eta": cls.eta
-        }
     
     @classmethod
     def getRPID(cls):
@@ -106,7 +91,7 @@ class Handler:
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], False ,))
         cls.timers[body["username"]].start()
         cls.credentials[body["username"]]["timedOut"] = False
-        print("Timer started!!")
+        print("Timer for %s has started" %(body["username"]))
         cls.isActive[body["username"]]["A"] = True
         return json.dumps({
             "rp_id":cls.RPID,
@@ -130,9 +115,8 @@ class Handler:
         pubKey = cls.credentials[body["username"]]["A"]["pubKey"]
         pubKeyVerify = {
             "t": Handler.coeffsToPolynomial(np.array(pubKey["t"])),
-            "seedVector": np.array(pubKey["seedVector"], dtype=int)
+            "Aseed": pubKey["Aseed"]
         }
-        
         signature = {
             "omega": str(body["omega"]),
             "c": str(body["c"]),
@@ -143,37 +127,23 @@ class Handler:
         if h1.hexdigest() == h2.hexdigest() and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
                 cls.timers[body["username"]].cancel()
-
                 cls.credentials[body["username"]]["completed"] = True    
                 return json.dumps("Successfully logged in as "+body["username"])
             cls.credentials[body["username"]]["timedOut"] = False
             return json.dumps({
-                "msg": "Timed out bitch!", 
+                "msg": "Timed out!", 
                 "reason": "timeout"})
         cls.isActive[body["username"]]["A"] = False
         return json.dumps({
-            "msg": "ClientDataJSON, authData or signature failed!", 
+            "msg": "clientDataJSON, authData or signature failed!", 
             "reason": "cryptoVerificationFailure"})
         
-
     @classmethod
     def handleRegister(cls, body):
         if body["username"] in list(cls.credentials.keys()):
             return json.dumps(body["username"]+" already registered")
-
+        
         challenge = Handler.getChallenge()
-        pubKeyParams = cls.getPublicKeyParams()
-
-        response = {
-            "challenge": challenge,
-            "pubKeyCredParams": pubKeyParams,
-            "rp": {
-                "id": cls.RPID,
-                "name": cls.RPName
-            },
-            "timeout": cls.timeout
-        }
-
         cls.credentials[body["username"]] = {
             "authenticator_id": body["authenticator_id"], 
             "challenge": challenge,
@@ -192,14 +162,20 @@ class Handler:
 
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], True ,))
         cls.timers[body["username"]].start()
-        print("Timer started!!")
+        print("Timer for %s has started" %(body["username"]))
 
-        return json.dumps(response)
-
+        return json.dumps({
+            "challenge": challenge,
+            "rp": {
+                "id": cls.RPID,
+                "name": cls.RPName
+            },
+            "timeout": cls.timeout
+        })
 
     @classmethod
     def handleTimeout(cls, username, isReg):
-        print("TIMEOUT")
+        print("TIMEOUT for", username)
         if username not in list(cls.credentials.keys()):
             return
         if cls.credentials[username]["completed"]:
@@ -236,7 +212,7 @@ class Handler:
     
         pubKey = {
             "t": Handler.coeffsToPolynomial(np.array(json.loads(body["public_key_t"]), dtype=int)),
-            "seedVector": np.array(json.loads(body["public_key_seed"]), dtype=int)
+            "Aseed": str(body["public_key_seed"])
         }
         signature = {
             "omega": str(body["omega"]),
@@ -256,7 +232,7 @@ class Handler:
                         "credential_id":body["credential_id"],
                         "pubKey":{
                             "t": Handler.polynomialToCoeffs(pubKey["t"]),
-                            "seedVector": pubKey["seedVector"].tolist()
+                            "Aseed": pubKey["Aseed"]
                         }
                     }
                     cursor = cls.credentialCollection.insert_one(doc)
@@ -266,9 +242,8 @@ class Handler:
 
                     dictPubKey = {
                         "t": np.array(json.loads(body["public_key_t"]), dtype=int),
-                        "seedVector": pubKey["seedVector"].tolist()
+                        "Aseed": pubKey["Aseed"]
                     }
-
                     cls.credentials[body["username"]]["A"]["pubKey"] = dictPubKey
                     return json.dumps(body["username"]+" is now registered!")
                 cls.credentials.pop(body["username"], None)
@@ -278,11 +253,11 @@ class Handler:
                     })
             cls.credentials.pop(body["username"], None)
             return json.dumps({
-                "msg": "Timed out bitch!", 
+                "msg": "Timed out!", 
                 "reason": "timeout"})
         cls.credentials.pop(body["username"], None)
         return json.dumps({
-            "msg": "Clientdata or signature failed!", 
+            "msg": "clientdata or signature failed!", 
             "reason": "cryptoVerificationFailure"})
   
     @classmethod
@@ -310,7 +285,7 @@ class Handler:
                 break
 
         taken = []
-        start = 196
+        start = 256-cls.eta
         for i in range(start, 256):
             j = 257
             while j > i:
@@ -321,21 +296,34 @@ class Handler:
             taken.append(j)
             cCoeffs[i] = cCoeffs[j]
             cCoeffs[j] = (-1)**int(s[i-start])
-        
         return cCoeffs
 
     @classmethod
-    def verifySig(cls, pubKey, sig, clientData):
-        seedVector = pubKey["seedVector"]
-        rng = np.random.default_rng(seedVector)
-
-        startA = []
-        ACoeffs = []
+    def expandA(cls, seed):
+        h = shake_128(seed)
+        A = []
+        k=0
         for _ in range(cls.n):
-            startA.append(np.array([Polynomial(rng.integers(0, cls.q, cls.d)) for _ in range(cls.m)]))
-            for i in range(cls.m):
-                ACoeffs.append(startA[-1][i].coef)
-        A = np.array(startA)
+            row = []
+            for _ in range(cls.m):
+                coefs = []
+                while len(coefs) < cls.d:
+                    sample = h.digest(k+3)
+                    b0 = int(bin(sample[k]), 2)
+                    b1 = int(bin(sample[k+1]), 2)
+                    b2mark = int('0'+bin(sample[k+2])[2:].rjust(8, '0')[1:], 2)
+                    candid = b2mark*2**(16)+b1*2**(8)+b0
+                    if candid < cls.q:
+                        coefs.append(candid)
+                    k+=3
+                row.append(Polynomial(coefs))
+            A.append(row)
+        return np.array(A)
+
+    @classmethod
+    def verifySig(cls, pubKey, sig, clientData):
+        
+        A = cls.expandA(pubKey["Aseed"].encode())
 
         t = pubKey["t"]
         omega = sig["omega"]
@@ -344,7 +332,7 @@ class Handler:
         c = sig["c"]
 
         h = shake_256()
-        h.update(np.array(ACoeffs).tobytes())
+        h.update(pubKey["Aseed"].encode())
         h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
         h.update(omega.encode())
         h.update(clientData.encode())
@@ -354,9 +342,7 @@ class Handler:
             return False
         
         cPoly = Polynomial(cls.hashToBall(h))
-
         ct = np.array([cPoly*p for p in t])
-        
         r = np.inner(A, z1)+z2-ct
         r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
 
@@ -366,7 +352,6 @@ class Handler:
         
         max = cls.approxBeta
         min = -cls.approxBeta
-        
         concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
         
         for coeff in concatenatedList:
@@ -378,7 +363,6 @@ class Handler:
         if max > cls.approxBeta or min < -cls.approxBeta:
             print("z1 or z2 not short...")
             return False
-
         return True
     
 
