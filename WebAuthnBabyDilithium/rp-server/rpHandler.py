@@ -303,23 +303,21 @@ class Handler:
     def expandA(cls, seed):
         h = shake_128(seed)
         A = []
-        k=0
+        repr = 0
         for _ in range(cls.n):
             row = []
             for _ in range(cls.m):
                 coefs = []
-                repr = 0
                 while len(coefs) < cls.d:
                     h.update(str(repr).encode())
-                    sample = h.digest(k+3)
-                    b0 = int(bin(sample[k]), 2)
-                    b1 = int(bin(sample[k+1]), 2)
-                    b2mark = int('0'+bin(sample[k+2])[2:].rjust(8, '0')[1:], 2)
+                    sample = h.digest(3)
+                    b0 = int(bin(sample[0]), 2)
+                    b1 = int(bin(sample[1]), 2)
+                    b2mark = int('0'+bin(sample[2])[2:].rjust(8, '0')[1:], 2)
                     candid = b2mark*2**(16)+b1*2**(8)+b0
                     if candid < cls.q:
                         coefs.append(candid)
-                        repr += 1
-                    k+=3
+                    repr+=1
                 row.append(Polynomial(coefs))
             A.append(row)
         return np.array(A)

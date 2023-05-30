@@ -79,17 +79,18 @@ class BabyDilithium {
         let h = self.hashlib.shake_256(seed)
         h.update(Python.str(Python.int(kappa)).encode())
         var y: [PythonObject] = []
-        var k = 0
+        var repr = 0
         for _ in 0..<noOfPoly {
             var coefs: [Int] = []
             while coefs.count < self.d {
-                let sample = h.digest(k+5)
-                let b0 = Int(sample[k])!
-                let b1 = Int(sample[k+1])!
-                let b2mark = Int(sample[k+2])! & 15
-                let b2markmark = Int(sample[k+2])! / 16
-                let b3 = Int(sample[k+3])!
-                let b4 = Int(sample[k+4])!
+                h.update(Python.str(repr).encode())
+                let sample = h.digest(5)
+                let b0 = Int(sample[0])!
+                let b1 = Int(sample[1])!
+                let b2mark = Int(sample[2])! & 15
+                let b2markmark = Int(sample[2])! / 16
+                let b3 = Int(sample[3])!
+                let b4 = Int(sample[4])!
                 
                 let candids = [b2mark*NSDecimalNumber(decimal: pow(2, 16)).intValue + b1*NSDecimalNumber(decimal: pow(2, 8)).intValue + b0,
                                b4*NSDecimalNumber(decimal: pow(2, 12)).intValue + b3*NSDecimalNumber(decimal: pow(2, 4)).intValue + b2markmark]
@@ -98,7 +99,7 @@ class BabyDilithium {
                         coefs.append(candid - (self.approxBeta+self.gamma))
                     }
                 }
-                k+=5
+                repr+=5
             }
             y.append(self.np.polynomial.Polynomial(Array(coefs[0..<self.d])))
         }
@@ -108,13 +109,12 @@ class BabyDilithium {
     private func expandS(seed: PythonObject, noOfPoly: Int) -> PythonObject {
         let h = self.hashlib.shake_256(seed)
         var s: [PythonObject] = []
-        var k = 0
+        var repr = 0
         for _ in 0..<noOfPoly {
             var coefs: [Int] = []
-            var repr = 0
             while coefs.count < self.d {
                 h.update(Python.str(repr).encode())
-                let sampleString = String(Python.bin(h.digest(k+1)[k]))!
+                let sampleString = String(Python.bin(h.digest(1)[0]))!
                 let index = sampleString.index(sampleString.startIndex, offsetBy: 2)
                 var sampleArray = Array(sampleString[index..<sampleString.endIndex])
                 if sampleArray.count < 4 {
@@ -128,9 +128,8 @@ class BabyDilithium {
                 }
                 if sampleInt < 2*self.beta+1 {
                     coefs.append(sampleInt-self.beta)
-                    repr += 1
                 }
-                k+=1
+                repr += 1
             }
             s.append(self.np.polynomial.Polynomial(coefs))
         }
@@ -140,18 +139,17 @@ class BabyDilithium {
     private func expandA(seed: PythonObject) -> PythonObject {
         let h = self.hashlib.shake_128(seed)
         var A: [[PythonObject]] = []
-        var k = 0
+        var repr = 0
         for _ in 0..<self.n {
             var row: [PythonObject] = []
             for _ in 0..<self.m {
                 var coefs: [Int] = []
-                var repr = 0
                 while coefs.count < self.d {
                     h.update(Python.str(repr).encode())
-                    let sample = h.digest(k+3)
-                    let b0 = Int(Python.int(Python.bin(sample[k]), 2))!
-                    let b1 = Int(Python.int(Python.bin(sample[k+1]), 2))!
-                    let b2string = String(Python.bin(sample[k+2]))!
+                    let sample = h.digest(3)
+                    let b0 = Int(Python.int(Python.bin(sample[0]), 2))!
+                    let b1 = Int(Python.int(Python.bin(sample[1]), 2))!
+                    let b2string = String(Python.bin(sample[2]))!
                     let index = b2string.index(b2string.startIndex, offsetBy: 2)
                     var b2Array = Array(b2string[index..<b2string.endIndex])
                     if b2Array.count < 8 {
@@ -168,9 +166,9 @@ class BabyDilithium {
                     let candid = b2Int * NSDecimalNumber(decimal: pow(2, 16)).intValue + b1 * NSDecimalNumber(decimal: pow(2, 8)).intValue + b0
                     if candid < self.q {
                         coefs.append(candid)
-                        repr += 1
+                        
                     }
-                    k+=3
+                    repr += 1
                 }
                 row.append(self.np.polynomial.Polynomial(coefs))
             }
