@@ -183,7 +183,9 @@ class EventHandler {
     }
     
     func testCrypto() {
-        let _ = babyDilithium.generateKeyPair()
+        
+        
+        
         /*
         let credID = "id11"
         let rpID = "rp id"

@@ -75,6 +75,38 @@ class BabyDilithium {
         var challengePolynomial: PythonObject
     }
     
+    private func expandMask(seed: PythonObject, noOfPoly: Int) -> PythonObject {
+        let h = self.hashlib.shake_256(seed)
+        var y: [PythonObject] = []
+        var k = 0
+        for _ in 0..<noOfPoly {
+            var coefs: [Int] = []
+            var repr = 0
+            while coefs.count < self.d {
+                h.update(Python.str(repr).encode())
+                let sample = h.digest(k+5)
+                let b0 = Int(sample[k])!
+                let b1 = Int(sample[k+1])!
+                let b2mark = Int(sample[k+2])! & 15
+                let b2markmark = Int(sample[k+2])! / 16
+                let b3 = Int(sample[k+3])!
+                let b4 = Int(sample[k+4])!
+                
+                let candids = [b2mark*NSDecimalNumber(decimal: pow(2, 16)).intValue + b1*NSDecimalNumber(decimal: pow(2, 8)).intValue + b0,
+                               b4*NSDecimalNumber(decimal: pow(2, 12)).intValue + b3*NSDecimalNumber(decimal: pow(2, 4)).intValue + b2markmark]
+                for candid in candids {
+                    if candid < 2*(self.approxBeta+self.gamma)+1 {
+                        coefs.append(candid - (self.approxBeta+self.gamma))
+                        repr+=1
+                    }
+                }
+                k+=5
+            }
+            y.append(self.np.polynomial.Polynomial(Array(coefs[0..<self.d])))
+        }
+        return self.np.array(y)
+    }
+    
     private func expandS(seed: PythonObject, noOfPoly: Int) -> PythonObject {
         let h = self.hashlib.shake_256(seed)
         var s: [PythonObject] = []
@@ -299,8 +331,8 @@ class BabyDilithium {
         
         var k = 1
         while true {
-            let y1 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.m)
-            let y2 = self.getRandomPolynomial(maxNorm: (self.gamma+self.approxBeta), size: self.n)
+            let y1 = self.expandMask(seed: self.os.urandom(48).hex().encode(), noOfPoly: self.m)
+            let y2 = self.expandMask(seed: self.os.urandom(48).hex().encode(), noOfPoly: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
             let omega = self.hashlib.shake_256()
