@@ -210,17 +210,17 @@ class BabyDilithium {
     
     public func generateKeyPair() -> KeyPair {
         let h = self.hashlib.shake_256(self.os.urandom(32).hex().encode())
-        let sample = h.hexdigest(160)
+        let sample = h.hexdigest(96)
         var rho1 = ""
-        for i in 0..<64 {
+        for i in 0..<32 {
             rho1 += String(sample[i])!
         }
         var rho2 = ""
-        for i in 64..<128 {
+        for i in 32..<64 {
             rho2 += String(sample[i])!
         }
         var rhomark = ""
-        for i in 128..<160 {
+        for i in 64..<96 {
             rhomark += String(sample[i])!
         }
         let s1 = self.expandS(seed: Python.str(rho1).encode(), noOfPoly: self.m)
@@ -341,8 +341,8 @@ class BabyDilithium {
 
         let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
-        let rho1 = self.os.urandom(64).hex()
-        let rho2 = self.os.urandom(64).hex()
+        let rho1 = self.os.urandom(32).hex()
+        let rho2 = self.os.urandom(32).hex()
         var k = 1
         var kappa = 0
         while true {
