@@ -75,15 +75,14 @@ class BabyDilithium {
         var challengePolynomial: PythonObject
     }
     
-    private func expandMask(seed: PythonObject, noOfPoly: Int) -> PythonObject {
+    private func expandMask(seed: PythonObject, kappa: Int, noOfPoly: Int) -> PythonObject {
         let h = self.hashlib.shake_256(seed)
+        h.update(Python.str(Python.int(kappa)).encode())
         var y: [PythonObject] = []
         var k = 0
         for _ in 0..<noOfPoly {
             var coefs: [Int] = []
-            var repr = 0
             while coefs.count < self.d {
-                h.update(Python.str(repr).encode())
                 let sample = h.digest(k+5)
                 let b0 = Int(sample[k])!
                 let b1 = Int(sample[k+1])!
@@ -97,7 +96,6 @@ class BabyDilithium {
                 for candid in candids {
                     if candid < 2*(self.approxBeta+self.gamma)+1 {
                         coefs.append(candid - (self.approxBeta+self.gamma))
-                        repr+=1
                     }
                 }
                 k+=5
@@ -263,10 +261,11 @@ class BabyDilithium {
         
     }
     
-    private func hashToBall(shake: PythonObject) -> PythonObject {
+    private func hashToBall(seed: PythonObject) -> PythonObject {
         let cCoeffs = self.np.zeros(256)
         var k = 0
         var s: [Int] = []
+        let shake = self.hashlib.shake_256(seed)
         while true {
             let byteString = String(Python.bin(Python.int(shake.digest(k+1)[k])))!
             let index = byteString.index(byteString.startIndex, offsetBy: 2)
@@ -312,7 +311,7 @@ class BabyDilithium {
         
         return Challenge(
             challengeHex: challengeHex,
-            challengePolynomial: self.np.polynomial.Polynomial(self.hashToBall(shake: h))
+            challengePolynomial: self.np.polynomial.Polynomial(self.hashToBall(seed: h.hexdigest(48).encode()))
         )
     }
     
@@ -342,11 +341,13 @@ class BabyDilithium {
 
         let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
-        
+        let rho1 = self.os.urandom(64).hex()
+        let rho2 = self.os.urandom(64).hex()
         var k = 1
+        var kappa = 0
         while true {
-            let y1 = self.expandMask(seed: self.os.urandom(48).hex().encode(), noOfPoly: self.m)
-            let y2 = self.expandMask(seed: self.os.urandom(48).hex().encode(), noOfPoly: self.n)
+            let y1 = self.expandMask(seed: rho1.encode(), kappa: kappa, noOfPoly: self.m)
+            let y2 = self.expandMask(seed: rho2.encode(), kappa: kappa, noOfPoly: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
             let omega = self.hashlib.shake_256()
@@ -383,6 +384,7 @@ class BabyDilithium {
                 )
             }
             k += 1
+            kappa += self.n
         }
     }
     

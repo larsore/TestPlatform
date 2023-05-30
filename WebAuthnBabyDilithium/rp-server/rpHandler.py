@@ -274,10 +274,11 @@ class Handler:
         return json.dumps("We have registered that "+body["username"]+" failed authentication")
     
     @classmethod
-    def hashToBall(cls, shake):
+    def hashToBall(cls, seed):
         cCoeffs = np.zeros(256, dtype=int)
         s = ""
         k = 0
+        shake = shake_256(seed)
         while True:
             s+=(bin(shake.digest(k+1)[k])[2:])
             k+=1
@@ -344,7 +345,7 @@ class Handler:
             print("Not the same challenge")
             return False
         
-        cPoly = Polynomial(cls.hashToBall(h))
+        cPoly = Polynomial(cls.hashToBall(h.hexdigest(48).encode()))
         ct = np.array([cPoly*p for p in t])
         r = np.inner(A, z1)+z2-ct
         r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
