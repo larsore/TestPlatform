@@ -34,14 +34,14 @@ def checkKeys(requiredKeys, keys):
 
 # Authenticator API Route to check for incoming registration or authentication attempts
 @app.route("/authenticator/poll", methods=['POST'])
-def authenticatorGet():
+def authenticatorPost():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
     requiredKeys = ["authenticator_id"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
-    response = pollingHandler.handleGETAuthenticator(body)
+    response = pollingHandler.handlePOSTAuthenticator(body)
     return response
 
 # Client API Route to POST registration attempts

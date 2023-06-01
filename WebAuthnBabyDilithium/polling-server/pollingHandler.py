@@ -9,10 +9,6 @@ class Handler:
 
     responseToClient = {}
 
-    handler = None
-
-    first = True
-
     isActive = {}
 
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -138,7 +134,7 @@ class Handler:
 
     
     @classmethod
-    def handleGETAuthenticator(cls, body):
+    def handlePOSTAuthenticator(cls, body):
         if body["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps("Authenticator with specified ID has not been registered")
 
