@@ -15,6 +15,7 @@ class BabyDilithium {
     private let np: PythonObject
     private let os: PythonObject
     private let hashlib: PythonObject
+    private let subprocess: PythonObject
     
     private let q: Int
     private let beta: Int
@@ -42,6 +43,7 @@ class BabyDilithium {
         self.np = Python.import("numpy")
         self.os = Python.import("os")
         self.hashlib = Python.import("hashlib")
+        self.subprocess = Python.import("subprocess")
         
         let fCoeffs = np.array([1] + Array(repeating: 0, count: (self.d - 2)) + [1])
         self.f = self.np.polynomial.Polynomial(fCoeffs)
@@ -177,23 +179,6 @@ class BabyDilithium {
         return self.np.array(A)
     }
     
-    private func getRandomPolynomial(maxNorm: Int, size: Int) -> PythonObject {
-        var randomVector: [PythonObject] = []
-        let length = 4096
-        let rand = self.os.urandom(length)
-        for i in 0..<length {
-            randomVector.append(rand[i])
-        }
-        let rng = self.np.random.default_rng(randomVector)
-
-        var poly: [PythonObject] = []
-        for _ in 0..<size {
-            let coef = rng.integers(-maxNorm, maxNorm+1, self.d)
-            poly.append(self.np.polynomial.Polynomial(coef))
-        }
-        return np.array(poly)
-    }
-    
     private func getCoefficients(polyList: PythonObject) -> [[Int]] {
         var res: [[Int]] = []
         for i in 0..<Int(polyList.size)! {
@@ -206,8 +191,23 @@ class BabyDilithium {
         return res
     }
     
-    public func generateKeyPair() -> KeyPair {
-        let h = self.hashlib.shake_256(self.os.urandom(32).hex().encode())
+    private func getRandomBytes(count: Int) -> [Int8]? {
+        var bytes = [Int8](repeating: 0, count: count)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        if status == errSecSuccess {
+            return bytes
+        } else {
+            print("Unable to sample random bytes")
+            return nil
+        }
+    }
+    
+    public func generateKeyPair() -> KeyPair? {
+        guard let zeta = self.getRandomBytes(count: 32) else {
+            print("Unable to sample zeta with getRandomBytes")
+            return nil
+        }
+        let h = self.hashlib.shake_256(self.np.array(zeta).tobytes())
         let sample = h.hexdigest(96)
         var rho1 = ""
         for i in 0..<32 {
@@ -339,13 +339,13 @@ class BabyDilithium {
 
         let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
-        let rho1 = self.os.urandom(32).hex()
-        let rho2 = self.os.urandom(32).hex()
+        let rho1 = self.getRandomBytes(count: 32)
+        let rho2 = self.getRandomBytes(count: 32)
         var k = 1
         var kappa = 0
         while true {
-            let y1 = self.expandMask(seed: rho1.encode(), kappa: kappa, noOfPoly: self.m)
-            let y2 = self.expandMask(seed: rho2.encode(), kappa: kappa, noOfPoly: self.n)
+            let y1 = self.expandMask(seed: self.np.array(rho1).tobytes(), kappa: kappa, noOfPoly: self.m)
+            let y2 = self.expandMask(seed: self.np.array(rho2).tobytes(), kappa: kappa, noOfPoly: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
             let omega = self.hashlib.shake_256()

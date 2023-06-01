@@ -196,11 +196,7 @@ class Handler:
                 "public_key_t": registerRequest["public_key_t"],
                 "public_key_seed": registerRequest["public_key_seed"],
                 "client_data": registerRequest["client_data"],
-                "authenticator_id": registerRequest["authenticator_id"],
-                "omega": registerRequest["omega"],
-                "z1": registerRequest["z1"],
-                "z2": registerRequest["z2"],
-                "c": registerRequest["c"]
+                "authenticator_id": registerRequest["authenticator_id"]
             }
 
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})

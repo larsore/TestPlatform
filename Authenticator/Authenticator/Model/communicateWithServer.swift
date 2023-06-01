@@ -73,7 +73,7 @@ class CommunicateWithServer {
     }
     
     //REGISTRATION POST
-    static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String, signature: BabyDilithium.Signature) async throws {
+    static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String) async throws {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
             return
@@ -87,11 +87,7 @@ class CommunicateWithServer {
             "public_key_seed":publicKey.Aseed,
             "client_data":clientData,
             "rp_id":RP_ID,
-            "authenticator_id":hashedDeviceID,
-            "omega":signature.omega,
-            "z1":signature.z1Coeffs,
-            "z2":signature.z2Coeffs,
-            "c":signature.cHex
+            "authenticator_id":hashedDeviceID
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")

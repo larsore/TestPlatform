@@ -96,11 +96,13 @@ class EventHandler {
     }
     
     func handleRegistration(RP_ID: String, clientData: String) -> String? {
-        let keyPair = babyDilithium.generateKeyPair()
+        guard let keyPair = babyDilithium.generateKeyPair() else {
+            print("Unable to generate keypair...")
+            return nil
+        }
         print("Keypair generated")
         let credential_ID = UUID().uuidString
         print("Generated credential_id: \(credential_ID)")
-        let sig = babyDilithium.sign(sk: keyPair.secretKey, message: clientData)
         
         let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keyPair.secretKey)!
         
@@ -120,8 +122,7 @@ class EventHandler {
                                                              credential_ID: credential_ID,
                                                              clientData: clientData,
                                                              RP_ID: RP_ID,
-                                                             hashedDeviceID: self.hashedDeviceID,
-                                                             signature: sig)
+                                                             hashedDeviceID: self.hashedDeviceID)
             } catch {
                 print("Unable to post registration response...")
                 return
@@ -184,7 +185,8 @@ class EventHandler {
     
     func testCrypto() {
         
-        
+        let keypair = babyDilithium.generateKeyPair()
+        let _ = babyDilithium.sign(sk: keypair!.secretKey, message: "adsd")
         
         /*
         let credID = "id11"

@@ -214,14 +214,8 @@ class Handler:
             "t": Handler.coeffsToPolynomial(np.array(json.loads(body["public_key_t"]), dtype=int)),
             "Aseed": str(body["public_key_seed"])
         }
-        signature = {
-            "omega": str(body["omega"]),
-            "c": str(body["c"]),
-            "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
-            "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
-        }
 
-        if h.hexdigest() == body["client_data"] and Handler.verifySig(pubKey=pubKey, sig=signature, clientData=h.hexdigest()):
+        if h.hexdigest() == body["client_data"]:
             if not cls.credentials[body["username"]]["timedOut"]:
                 cls.timers[body["username"]].cancel()
                 docs = cls.credentialCollection.find({"username": body["username"]})
@@ -257,7 +251,7 @@ class Handler:
                 "reason": "timeout"})
         cls.credentials.pop(body["username"], None)
         return json.dumps({
-            "msg": "clientdata or signature failed!", 
+            "msg": "Not the same clientData!", 
             "reason": "cryptoVerificationFailure"})
   
     @classmethod
