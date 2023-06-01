@@ -6,9 +6,7 @@ import time
 class Handler:
     
     activeRequests = {}
-
     responseToClient = {}
-
     isActive = {}
 
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -38,17 +36,16 @@ class Handler:
         if registerRequest["authenticator_id"] in list(cls.activeRequests.keys()):
             if registerRequest["rp_id"] in cls.activeRequests[registerRequest["authenticator_id"]]["RPs"]:
                 return json.dumps("Authenticator with specified ID has already registered with the given RP")
-        else:
-            if registerRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[registerRequest["authenticator_id"]]["R"]:
+        if registerRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[registerRequest["authenticator_id"]]["R"]:
                 return json.dumps("Authenticator is currently registrating...")
-            cls.activeRequests[registerRequest["authenticator_id"]] = {
-                "R": deque(),
-                "A": deque(),
-                "RPs": [],
-                "dismissed": False,
-                "timedOut": False
-            }
-
+          
+        cls.activeRequests[registerRequest["authenticator_id"]] = {
+            "R": deque(),
+            "A": deque(),
+            "RPs": [],
+            "dismissed": False,
+            "timedOut": False
+        }
         stack = cls.activeRequests[registerRequest["authenticator_id"]]["R"] 
 
         if len(stack) == 0:

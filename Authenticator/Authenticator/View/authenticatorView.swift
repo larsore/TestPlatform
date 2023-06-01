@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import LocalAuthentication
 import Foundation
 
 
@@ -37,12 +36,10 @@ struct authenticatorView: View {
     @State private var showDeviceID = false
     @State var isSigning = false
     @State var doneSigning = false
-    @State var credID = ""
     @State var registerAlertText = ""
     @State var authAlertText = ""
     @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
-    let keychain = AccessKeychain()
     let eventHandler = EventHandler(deviceID: UIDevice.current.identifierForVendor!.uuidString)
     
     var body: some View {

@@ -24,7 +24,7 @@ class Handler:
     timeout = 30 #sekunder
 
     RPName = "NTNU Master"
-    RPID = "www.ntnu.no/masteroppgave"
+    RPID = None
 
     dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
     db = dbClient['FIDOServer']
