@@ -143,6 +143,10 @@ class Handler:
         if body["username"] in list(cls.credentials.keys()):
             return json.dumps(body["username"]+" already registered")
         
+        for key in list(cls.credentials.keys()):
+            if body["authenticator_id"] == cls.credentials[key]["authenticator_id"]:
+                return json.dumps("Authenticator is already registered to another user.")
+        
         challenge = Handler.getChallenge()
         cls.credentials[body["username"]] = {
             "authenticator_id": body["authenticator_id"], 

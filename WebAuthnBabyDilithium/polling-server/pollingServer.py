@@ -108,7 +108,6 @@ def authenticatorAuthenticate():
     response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)
     return response
     
-
 @app.route("/client/register/failed", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientFailedReg():
