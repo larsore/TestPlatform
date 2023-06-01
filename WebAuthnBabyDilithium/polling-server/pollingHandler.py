@@ -46,10 +46,9 @@ class Handler:
             "dismissed": False,
             "timedOut": False
         }
-        stack = cls.activeRequests[registerRequest["authenticator_id"]]["R"] 
 
-        if len(stack) == 0:
-            stack.append({
+        if len(cls.activeRequests[registerRequest["authenticator_id"]]["R"]) == 0:
+            cls.activeRequests[registerRequest["authenticator_id"]]["R"].append({
                 "credential_id": "",
                 "rp_id": registerRequest["rp_id"],
                 "client_data": registerRequest["client_data"],
@@ -95,10 +94,8 @@ class Handler:
         if authenticateRequest["rp_id"] not in cls.activeRequests[authenticateRequest["authenticator_id"]]["RPs"]:
             return json.dumps("Authenticator with specified ID has not registered with the given RP")
 
-        stack = cls.activeRequests[authenticateRequest["authenticator_id"]]["A"] 
-
-        if len(stack) == 0:
-            stack.append({
+        if len(cls.activeRequests[authenticateRequest["authenticator_id"]]["A"]) == 0:
+            cls.activeRequests[authenticateRequest["authenticator_id"]]["A"].append({
                 "credential_id": authenticateRequest["credential_id"],
                 "rp_id": authenticateRequest["rp_id"],
                 "client_data": authenticateRequest["client_data"],

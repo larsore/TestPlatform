@@ -10,12 +10,11 @@ import NumPySupport
 import PythonSupport
 import PythonKit
 
-class BabyDilithium {
+class DilithiumLite {
     
     private let np: PythonObject
     private let os: PythonObject
     private let hashlib: PythonObject
-    private let subprocess: PythonObject
     
     private let q: Int
     private let beta: Int
@@ -43,7 +42,6 @@ class BabyDilithium {
         self.np = Python.import("numpy")
         self.os = Python.import("os")
         self.hashlib = Python.import("hashlib")
-        self.subprocess = Python.import("subprocess")
         
         let fCoeffs = np.array([1] + Array(repeating: 0, count: (self.d - 2)) + [1])
         self.f = self.np.polynomial.Polynomial(fCoeffs)

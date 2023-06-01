@@ -10,7 +10,7 @@ import PythonKit
 
 class EventHandler {
     
-    private var babyDilithium: BabyDilithium
+    private var babyDilithium: DilithiumLite
     private var hashlib: PythonObject
     private var os: PythonObject
     
@@ -22,7 +22,7 @@ class EventHandler {
             return nil
         }
         CommunicateWithServer.SetUrl(url: ipAddrAndPara.pollingUrl+"/authenticator")
-        self.babyDilithium = BabyDilithium(
+        self.babyDilithium = DilithiumLite(
             q: ipAddrAndPara.q,
             beta: ipAddrAndPara.beta,
             d: ipAddrAndPara.d,
@@ -104,7 +104,7 @@ class EventHandler {
         let credential_ID = UUID().uuidString
         print("Generated credential_id: \(credential_ID)")
         
-        let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keyPair.secretKey)!
+        let encodedSecretKey = DilithiumLite.getSecretKeyAsData(secretKey: keyPair.secretKey)!
         
         do {
             try AccessKeychain.save(credentialID: credential_ID,
@@ -142,7 +142,7 @@ class EventHandler {
         }
         print("Correct secret key retrieved from keychain")
         
-        guard let secretKey = try? JSONDecoder().decode(BabyDilithium.SecretKey.self, from: data) else {
+        guard let secretKey = try? JSONDecoder().decode(DilithiumLite.SecretKey.self, from: data) else {
             print("Unable to decode secret key")
             return
         }

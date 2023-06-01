@@ -73,7 +73,7 @@ class CommunicateWithServer {
     }
     
     //REGISTRATION POST
-    static func postResponse(publicKey: BabyDilithium.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String) async throws {
+    static func postResponse(publicKey: DilithiumLite.PublicKey, credential_ID: String, clientData: String, RP_ID: String, hashedDeviceID: String) async throws {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
             return
@@ -100,7 +100,7 @@ class CommunicateWithServer {
     
     
     //AUTHENTICATION POST
-    static func postResponse(signature: BabyDilithium.Signature, authenticatorData: String, hashedDeviceID: String) async throws {
+    static func postResponse(signature: DilithiumLite.Signature, authenticatorData: String, hashedDeviceID: String) async throws {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
             return
