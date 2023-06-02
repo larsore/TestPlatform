@@ -107,9 +107,9 @@ class EventHandler {
         let encodedSecretKey = DilithiumLite.getSecretKeyAsData(secretKey: keyPair.secretKey)!
         
         do {
-            try AccessKeychain.save(credentialID: credential_ID,
-                                RPID: RP_ID,
-                                secretKey: encodedSecretKey)
+            try AccessKeychain.saveItem(account: credential_ID,
+                                service: RP_ID,
+                                item: encodedSecretKey)
         } catch {
             print(error)
             return nil
@@ -133,9 +133,9 @@ class EventHandler {
     }
     
     func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String) {
-        guard let data = AccessKeychain.get(
-            credentialID: credential_ID,
-            RPID: RP_ID
+        guard let data = AccessKeychain.getItem(
+            account: credential_ID,
+            service: RP_ID
         ) else {
             print("Failed to read secret key from keychain")
             return

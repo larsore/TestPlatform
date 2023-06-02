@@ -20,13 +20,13 @@ class AccessKeychain {
         case unknown(OSStatus)
     }
     
-    static func save(credentialID: String, RPID: String, secretKey: Data) throws {
+    static func saveItem(account: String, service: String, item: Data) throws {
         let query: [String: AnyObject] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: credentialID as AnyObject,
-            kSecAttrAccount as String: RPID as AnyObject,
+            kSecAttrService as String: service as AnyObject,
+            kSecAttrAccount as String: account as AnyObject,
             kSecAttrAccessControl as String: AccessKeychain.access as AnyObject,
-            kSecValueData as String: secretKey as AnyObject,
+            kSecValueData as String: item as AnyObject,
         ]
         
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -43,11 +43,11 @@ class AccessKeychain {
         
     }
     
-    static func get(credentialID: String, RPID: String) -> Data? {
+    static func getItem(account: String, service: String) -> Data? {
         let query: [String: AnyObject] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: credentialID as AnyObject,
-            kSecAttrAccount as String: RPID as AnyObject,
+            kSecAttrService as String: service as AnyObject,
+            kSecAttrAccount as String: account as AnyObject,
             kSecAttrAccessControl as String: AccessKeychain.access as AnyObject,
             kSecReturnData as String: kCFBooleanTrue,
             kSecMatchLimit as String: kSecMatchLimitOne
