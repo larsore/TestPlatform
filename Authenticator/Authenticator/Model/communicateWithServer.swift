@@ -150,7 +150,12 @@ class CommunicateWithServer {
                 "action": "auth"
             ]
             Task {
-                try await CommunicateWithServer.post(url: url, body: body)
+                guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
+                    print("Unable to get dismissal response from server")
+                    return
+                }
+                let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+                print("\(successInfo.success)")
             }
         }
     }

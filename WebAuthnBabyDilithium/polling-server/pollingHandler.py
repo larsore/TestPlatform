@@ -65,7 +65,6 @@ class Handler:
             while waitedTime <= timeout:
                 waitedTime += interval
                 time.sleep(interval)
-                print("Waited for ", waitedTime, " seconds...")
                 if cls.activeRequests[registerRequest["authenticator_id"]]["dismissed"]:
                     cls.activeRequests.pop(registerRequest["authenticator_id"], None)
                     return json.dumps("Authenticator chose to dismiss the registration attempt")
@@ -74,9 +73,8 @@ class Handler:
                     response = cls.responseToClient.pop(registerRequest["authenticator_id"], None)
                     cls.isActive[registerRequest["authenticator_id"]]["R"] = False
                     return json.dumps(response)
-            cls.activeRequests[registerRequest["authenticator_id"]]["R"] = deque()
-            cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"] = True
-            cls.isActive[registerRequest["authenticator_id"]]["R"] = False
+            cls.activeRequests.pop(registerRequest["authenticator_id"], None)
+            cls.isActive.pop(registerRequest["authenticator_id"], None)
             return json.dumps("Timeout")
         return json.dumps("Pending registration already exists for the given authenticator")
     
@@ -160,12 +158,12 @@ class Handler:
 
     @classmethod
     def handleDismissal(cls, req):
-        print(req)
-
         if req["action"] == "auth":
             cls.isActive[req["authenticator_id"]]["A"] = False
             cls.activeRequests[req["authenticator_id"]]["dismissed"] = True
         else:
+            if req["authenticator_id"] not in list(cls.activeRequests.keys()):
+                return json.dumps({"success": "Already timed out"})
             cls.activeRequests[req["authenticator_id"]]["dismissed"] = True
             cls.isActive[req["authenticator_id"]]["R"] = False
         
@@ -173,10 +171,8 @@ class Handler:
 
     @classmethod
     def handlePOSTAuthenticatorRegister(cls, registerRequest):
-        print(list(registerRequest.keys()))
 
-        if cls.activeRequests[registerRequest["authenticator_id"]]["timedOut"]:
-            cls.activeRequests.pop(registerRequest["authenticator_id"], None)
+        if registerRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps({"success": "Timed Out"})
 
         cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
