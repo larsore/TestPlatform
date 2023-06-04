@@ -131,29 +131,23 @@ class Handler:
             return json.dumps("Authenticator with specified ID has not been registered")
 
         activeRequests = cls.activeRequests[body["authenticator_id"]]
-        activeRegistrations = activeRequests["R"]
-        activeAuthentications = activeRequests["A"]
         
-        if len(activeRegistrations) != 0:
-            request = activeRegistrations.pop()
-            print(cls.activeRequests)
+        if len(activeRequests["R"]) != 0:
+            request = activeRequests["R"].pop()
             return json.dumps({
                 "credential_id": "",
                 "rp_id": request["rp_id"],
                 "client_data": request["client_data"],
                 "username": request["username"]
             })
-        
-        elif len(activeAuthentications) != 0:
-            request = activeAuthentications.pop()
-            cls.isAuthenticating = True
+        elif len(activeRequests["A"]) != 0:
+            request = activeRequests["A"].pop()
             return json.dumps({
                 "credential_id": request["credential_id"],
                 "rp_id": request["rp_id"],
                 "client_data": request["client_data"],
                 "username": request["username"]
             })
-             
         return json.dumps("No pending requests for authenticator")
 
     @classmethod

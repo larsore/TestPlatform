@@ -44,15 +44,11 @@ class CommunicateWithServer {
         let body: [String: Any] = [
             "authenticator_id":hashedDeviceID
         ]
-        
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")
             return nil
         }
-            
-        let message = try JSONDecoder().decode(GetMessage.self, from: data)
-        print("Response when polling server: \(message)")
-        return message
+        return try JSONDecoder().decode(GetMessage.self, from: data)
     }
     
     private static func post(url: URL, body: [String: Any]) async throws -> Data? {

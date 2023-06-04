@@ -209,50 +209,45 @@ class Handler:
        
     @classmethod
     def handleRegisterResponse(cls, body):
-        cls.isActive[body["username"]]["R"] = False
-        h = sha256()
-        h.update(cls.RPID.encode())
-        h.update(cls.credentials[body["username"]]["challenge"].encode())
-    
-        pubKey = {
-            "t": Handler.coeffsToPolynomial(np.array(json.loads(body["public_key_t"]), dtype=int)),
-            "Aseed": str(body["public_key_seed"])
-        }
-
-        if h.hexdigest() == body["client_data"]:
-            if not cls.credentials[body["username"]]["timedOut"]:
-                cls.timers[body["username"]].cancel()
-                docs = cls.credentialCollection.find({"username": body["username"]})
-                if len(list(docs)) == 0:
-                    doc = {
-                        "username":body["username"],
-                        "authenticator_id":body["authenticator_id"],
-                        "credential_id":body["credential_id"],
-                        "pubKey":{
-                            "t": Handler.polynomialToCoeffs(pubKey["t"]),
-                            "Aseed": pubKey["Aseed"]
-                        }
-                    }
-                    cursor = cls.credentialCollection.insert_one(doc)
-                    print(str(cursor.inserted_id)+" added to credential collection")
-                    cls.credentials[body["username"]]["completed"] = True
-                    cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
-
-                    dictPubKey = {
-                        "t": np.array(json.loads(body["public_key_t"]), dtype=int),
-                        "Aseed": pubKey["Aseed"]
-                    }
-                    cls.credentials[body["username"]]["A"]["pubKey"] = dictPubKey
-                    return json.dumps(body["username"]+" is now registered!")
-                cls.credentials.pop(body["username"], None)
-                return json.dumps({
-                    "msg": "User already registered for some reason", 
-                    "reason": "userAlreadyRegistered"
-                    })
+        if cls.credentials[body["username"]]["timedOut"]:
             cls.credentials.pop(body["username"], None)
             return json.dumps({
                 "msg": "Timed out!", 
                 "reason": "timeout"})
+
+        cls.isActive[body["username"]]["R"] = False
+        h = sha256()
+        h.update(cls.RPID.encode())
+        h.update(cls.credentials[body["username"]]["challenge"].encode())
+
+        if h.hexdigest() == body["client_data"]:
+            cls.timers[body["username"]].cancel()
+            docs = cls.credentialCollection.find({"username": body["username"]})
+            if len(list(docs)) == 0:
+                doc = {
+                    "username":body["username"],
+                    "authenticator_id":body["authenticator_id"],
+                    "credential_id":body["credential_id"],
+                    "pubKey":{
+                        "t": json.loads(body["public_key_t"]),
+                        "Aseed": str(body["public_key_seed"])
+                    }
+                }
+                cursor = cls.credentialCollection.insert_one(doc)
+                print(str(cursor.inserted_id)+" added to credential collection")
+                cls.credentials[body["username"]]["completed"] = True
+                cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
+                dictPubKey = {
+                    "t": np.array(json.loads(body["public_key_t"]), dtype=int),
+                    "Aseed": str(body["public_key_seed"])
+                }
+                cls.credentials[body["username"]]["A"]["pubKey"] = dictPubKey
+                return json.dumps(body["username"]+" is now registered!")
+            cls.credentials.pop(body["username"], None)
+            return json.dumps({
+                "msg": "User already registered for some reason", 
+                "reason": "userAlreadyRegistered"
+                })
         cls.credentials.pop(body["username"], None)
         return json.dumps({
             "msg": "Not the same clientData!", 
