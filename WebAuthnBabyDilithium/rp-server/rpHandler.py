@@ -212,11 +212,11 @@ class Handler:
                 "reason": "timeout"})
 
         cls.isActive[body["username"]]["R"] = False
-        h = sha256()
-        h.update(cls.RPID.encode())
-        h.update(cls.credentials[body["username"]]["challenge"].encode())
+        expectedHash = sha256()
+        expectedHash.update(cls.RPID.encode())
+        expectedHash.update(cls.credentials[body["username"]]["challenge"].encode())
 
-        if h.hexdigest() == body["client_data"]:
+        if expectedHash.hexdigest() == body["client_data"]:
             cls.timers[body["username"]].cancel()
             docs = cls.credentialCollection.find({"username": body["username"]})
             if len(list(docs)) == 0:
@@ -229,8 +229,7 @@ class Handler:
                         "Aseed": str(body["public_key_seed"])
                     }
                 }
-                cursor = cls.credentialCollection.insert_one(doc)
-                print(str(cursor.inserted_id)+" added to credential collection")
+                cls.credentialCollection.insert_one(doc)
                 cls.credentials[body["username"]]["completed"] = True
                 cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
                 dictPubKey = {

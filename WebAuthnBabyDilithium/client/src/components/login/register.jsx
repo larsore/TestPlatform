@@ -53,7 +53,6 @@ export class Register extends React.Component {
         };
         const RPresponse = await fetch(Register.RPUrl+'/register', RPrequestOptions);
         const RPdata = await RPresponse.json();
-        console.log(RPdata)
 
         if (typeof RPdata === 'string') {
             Register.changeLabel("RPregResponse", RPdata)
@@ -68,6 +67,7 @@ export class Register extends React.Component {
         var clientData = sha256.create();
         clientData.update(rp_id);
         clientData.update(challenge);
+        clientData = clientData.hex()
 
         const pollingRequestOptions = {
             method: 'POST',
@@ -75,16 +75,13 @@ export class Register extends React.Component {
             body: JSON.stringify({ 
                 "authenticator_id": hashedAuthID.hex(),
                 "rp_id": rp_id,
-                "client_data": clientData.hex(),
+                "client_data": clientData,
                 "timeout": timeout,
                 "username": username
             })
         };
         const pollingResponse = await fetch(Register.pollingUrl+'/client/register', pollingRequestOptions);
         const pollingData = await pollingResponse.json();
-        
-        //Check response and act different based on repsonse from polling server
-        console.log(pollingData);
         
         if (typeof pollingData === 'string') {
             const registerFailedOptions = {
@@ -94,9 +91,7 @@ export class Register extends React.Component {
                     "username": username
                 })
             };
-            const registerFailedResponse = await fetch(Register.RPUrl+'/authenticator/register/failed', registerFailedOptions);
-            const registerFailedData = await registerFailedResponse.json();
-            console.log(registerFailedData)
+            await fetch(Register.RPUrl+'/authenticator/register/failed', registerFailedOptions);
             
             Register.changeLabel("authenticatorResponse", pollingData);
             return
@@ -117,7 +112,6 @@ export class Register extends React.Component {
         };
         const RPresponseResponse = await fetch(Register.RPUrl+'/authenticator/register', RPresponseOptions);
         const RPresponseData = await RPresponseResponse.json();
-        console.log(RPresponseData)
         
         if (typeof RPresponseData !== 'string') {
             const pollingResultOptions = {
@@ -128,9 +122,8 @@ export class Register extends React.Component {
                     "username": username
                 })
             };
-            const pollingResultResponse = await fetch(Register.pollingUrl+'/client/register/failed', pollingResultOptions);
-            const pollingResultData = await pollingResultResponse.json();
-            console.log(pollingResultData);
+            await fetch(Register.pollingUrl+'/client/register/failed', pollingResultOptions);
+            
             Register.changeLabel("RPfinalResponse", RPresponseData["reason"]+": "+RPresponseData["msg"]);
         } else {
             Register.changeLabel("RPfinalResponse", RPresponseData);

@@ -47,9 +47,6 @@ export class Login extends React.Component {
         };
         const RPresponse = await fetch(Login.RPUrl+'/authenticate', RPrequestOptions);
         const RPdata = await RPresponse.json();
-        console.log(RPdata)
-        // TODO: Compare HTTP Origin with RP_ID
-        //console.log(response.headers.get("Origin"));
 
         if (typeof RPdata === 'string') {
             Login.changeLabel("RPloginResponse", RPdata)
@@ -81,11 +78,7 @@ export class Login extends React.Component {
         };
         const pollingResponse = await fetch(Login.pollingUrl+'/client/authenticate', pollingRequestOptions);
         const pollingData = await pollingResponse.json();
-        
-        //Check response and act different based on response from polling server
-        console.log(pollingData);
-
-        
+     
         if (typeof pollingData === 'string') {
             const loginFailedOptions = {
                 method: 'POST',
@@ -94,9 +87,8 @@ export class Login extends React.Component {
                     "username": username
                 })
             };
-            const loginFailedResponse = await fetch(Login.RPUrl+'/authenticator/authenticate/failed', loginFailedOptions);
-            const loginFailedData = await loginFailedResponse.json();
-            console.log(loginFailedData)
+            await fetch(Login.RPUrl+'/authenticator/authenticate/failed', loginFailedOptions);
+            
             Login.changeLabel("authenticatorResponse", pollingData);
             return
         }
@@ -118,7 +110,6 @@ export class Login extends React.Component {
         };
         const RPresponseResponse = await fetch(Login.RPUrl+'/authenticator/authenticate', RPresponseOptions);
         const RPresponseData = await RPresponseResponse.json();
-        console.log(RPresponseData)
         
         if (typeof RPresponseData !== 'string') {
             const pollingResultOptions = {
@@ -129,13 +120,12 @@ export class Login extends React.Component {
                     "username": username
                 })
             };
-            const pollingResultResponse = await fetch(Login.pollingUrl+'/client/authenticate/failed', pollingResultOptions);
-            const pollingResultData = await pollingResultResponse.json();
-            console.log(pollingResultData);
+            await fetch(Login.pollingUrl+'/client/authenticate/failed', pollingResultOptions);
+
             Login.changeLabel("RPfinalResponse", RPresponseData["reason"]+": "+RPresponseData["msg"]);
         } else {
             Login.changeLabel("RPfinalResponse", RPresponseData);
-            //window.location.replace('https://www.youtube.com/watch?v=xvFZjo5PgG0?autoplay=1');
+            window.location.replace('https://www.youtube.com/watch?v=xvFZjo5PgG0?autoplay=1');
         }
     }
 
