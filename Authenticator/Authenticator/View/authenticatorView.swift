@@ -53,7 +53,7 @@ struct authenticatorView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(25)
                 
-                Button("Device ID") {
+                Button("Authenticator ID") {
                     showDeviceID = true
                     showCheckMark = false
                     //eventHandler?.testCrypto()
@@ -98,10 +98,7 @@ struct authenticatorView: View {
                         print("lastMessage not updated, still nil")
                         return
                     }
-                    guard let _ = eventHandler?.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data) else {
-                        print("Unable to register")
-                        return
-                    }
+                    eventHandler?.handleRegistration(RP_ID: message.rp_id, clientData: message.client_data)
                     isSigning = false
                     doneSigning = true
                     isDeciding = false

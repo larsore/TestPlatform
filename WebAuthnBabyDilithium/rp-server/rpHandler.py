@@ -108,10 +108,6 @@ class Handler:
         h1.update(cls.RPID.encode())
         h1.update(cls.credentials[body["username"]]["challenge"].encode())
 
-        h2 = sha256()
-        h2.update(body["rp_id"].encode())
-        h2.update(body["challenge"].encode())
-
         pubKey = cls.credentials[body["username"]]["A"]["pubKey"]
         pubKeyVerify = {
             "t": Handler.coeffsToPolynomial(np.array(pubKey["t"])),
@@ -124,7 +120,7 @@ class Handler:
             "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
         }
 
-        if h1.hexdigest() == h2.hexdigest() and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
+        if h1.hexdigest() == body["clientData"] and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
                 cls.timers[body["username"]].cancel()
                 cls.credentials[body["username"]]["completed"] = True    

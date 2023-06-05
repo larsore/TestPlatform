@@ -102,7 +102,7 @@ def authenticatorAuthenticate():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id"]
+    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id", "clientData"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)

@@ -119,7 +119,7 @@ def clientAuthenticatorAuthenticateResponse():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["omega", "c", "z1", "z2", "authenticator_data", "username", "rp_id", "challenge"]
+    requiredKeys = ["omega", "c", "z1", "z2", "authenticator_data", "username", "rp_id", "clientData"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     response = responseHandler.handleLoginResponse(body)

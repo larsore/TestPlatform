@@ -10,7 +10,7 @@ import PythonKit
 
 class EventHandler {
     
-    private var babyDilithium: DilithiumLite
+    private var dilithiumLite: DilithiumLite
     private var hashlib: PythonObject
     private var os: PythonObject
     
@@ -22,7 +22,7 @@ class EventHandler {
             return nil
         }
         CommunicateWithServer.SetUrl(url: ipAddrAndPara.pollingUrl+"/authenticator")
-        self.babyDilithium = DilithiumLite(
+        self.dilithiumLite = DilithiumLite(
             q: ipAddrAndPara.q,
             beta: ipAddrAndPara.beta,
             d: ipAddrAndPara.d,
@@ -95,14 +95,12 @@ class EventHandler {
         return pollingAddressAndParameters
     }
     
-    func handleRegistration(RP_ID: String, clientData: String) -> String? {
-        guard let keyPair = babyDilithium.generateKeyPair() else {
+    func handleRegistration(RP_ID: String, clientData: String) {
+        guard let keyPair = dilithiumLite.generateKeyPair() else {
             print("Unable to generate keypair...")
-            return nil
+            return
         }
-        print("Keypair generated")
         let credential_ID = UUID().uuidString
-        print("Generated credential_id: \(credential_ID)")
         
         let encodedSecretKey = DilithiumLite.getSecretKeyAsData(secretKey: keyPair.secretKey)!
         
@@ -112,10 +110,8 @@ class EventHandler {
                                 item: encodedSecretKey)
         } catch {
             print(error)
-            return nil
+            return
         }
-        print("Credentials saved to keychain")
-        
         Task {
             do {
                 try await CommunicateWithServer.postResponse(publicKey: keyPair.publicKey,
@@ -128,8 +124,6 @@ class EventHandler {
                 return
             }
         }
-        print("Public key, credential_ID and client data sent to pollingServer")
-        return credential_ID
     }
     
     func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String) {
@@ -147,7 +141,7 @@ class EventHandler {
             return
         }
         
-        let sig = babyDilithium.sign(sk: secretKey, message: clientData)
+        let sig = dilithiumLite.sign(sk: secretKey, message: clientData)
         
         guard let authenticatorData = String(hashlib.sha256(Python.str(RP_ID).encode()).hexdigest()) else {
             print("Unable to convert authenticatorData python hash to a SWIFT String")
@@ -158,7 +152,8 @@ class EventHandler {
             do {
                 try await CommunicateWithServer.postResponse(signature: sig,
                                                              authenticatorData: authenticatorData,
-                                                             hashedDeviceID: self.hashedDeviceID
+                                                             hashedDeviceID: self.hashedDeviceID,
+                                                             clientData: clientData
                 )
             } catch {
                 print("Unable to post authentication response...")
@@ -185,8 +180,8 @@ class EventHandler {
     
     func testCrypto() {
         
-        let keypair = babyDilithium.generateKeyPair()
-        let _ = babyDilithium.sign(sk: keypair!.secretKey, message: "adsd")
+        let keypair = dilithiumLite.generateKeyPair()
+        let _ = dilithiumLite.sign(sk: keypair!.secretKey, message: "adsd")
         
         /*
         let credID = "id11"

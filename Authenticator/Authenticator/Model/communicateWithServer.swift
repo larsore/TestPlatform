@@ -96,7 +96,7 @@ class CommunicateWithServer {
     
     
     //AUTHENTICATION POST
-    static func postResponse(signature: DilithiumLite.Signature, authenticatorData: String, hashedDeviceID: String) async throws {
+    static func postResponse(signature: DilithiumLite.Signature, authenticatorData: String, hashedDeviceID: String, clientData: String) async throws {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
             return
@@ -110,7 +110,8 @@ class CommunicateWithServer {
             "z1":signature.z1Coeffs,
             "z2":signature.z2Coeffs,
             "c":signature.cHex,
-            "authenticator_id": hashedDeviceID
+            "authenticator_id": hashedDeviceID,
+            "clientData": clientData
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")

@@ -165,7 +165,6 @@ class Handler:
 
     @classmethod
     def handlePOSTAuthenticatorRegister(cls, registerRequest):
-
         if registerRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps({"success": "Timed Out"})
 
@@ -188,11 +187,8 @@ class Handler:
                 "_id": registerRequest["authenticator_id"],
                 "RPs": [registerRequest["rp_id"]]  
             }
-            cursor = cls.authenticatorCollection.insert_one(newDoc)
-            print(cursor.inserted_id+" added to mongodb")
-
+            cls.authenticatorCollection.insert_one(newDoc)
         return json.dumps({"success": "NS Auth Reg"})
-
 
     @classmethod
     def handlePOSTAuthenticatorAuthenticate(cls, authenticateRequest):
@@ -208,7 +204,8 @@ class Handler:
                 "omega": authenticateRequest["omega"],
                 "c": authenticateRequest["c"],
                 "z1": authenticateRequest["z1"],
-                "z2": authenticateRequest["z2"]
+                "z2": authenticateRequest["z2"],
+                "clientData": authenticateRequest["clientData"]
             }
 
         return json.dumps({"success": "NS Auth Auth"})
