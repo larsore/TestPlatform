@@ -270,9 +270,9 @@ class Handler:
                 break
 
         taken = []
-        start = 256-cls.eta
-        for i in range(start, 256):
-            j = 257
+        start = cls.d-cls.eta
+        for i in range(start, cls.d):
+            j = cls.d+1
             while j > i:
                 candidate = shake.digest(k+1)[k]
                 if candidate not in taken:

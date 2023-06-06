@@ -18,6 +18,22 @@ def loadIp():
     f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
     f.write(baseUrl)
     f.close()
+
+    fRead = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/para.txt", "r")
+    lines = []
+    for line in fRead:
+        if line.startswith('url'):
+            lines.append("url="+baseUrl+"\n")
+        else:
+            lines.append(line)
+    fRead.close()
+    fWrite = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/para.txt", "w")
+    for line in lines:
+        fWrite.write(line)
+    fWrite.close()
+
+    
+
     macClientUrl = baseUrl+":3000"
     s.close()
 

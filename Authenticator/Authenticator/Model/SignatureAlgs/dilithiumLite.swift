@@ -276,9 +276,9 @@ class DilithiumLite {
         }
         
         var taken: [Int] = []
-        let start = 196
-        for i in start..<256 {
-            var j = 257
+        let start = self.d - self.eta
+        for i in start..<self.d {
+            var j = self.d+1
             while j > i {
                 if !taken.contains(Int(shake.digest(k+1)[k])!) {
                     j = Int(shake.digest(k+1)[k])!
