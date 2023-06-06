@@ -17,7 +17,7 @@ class EventHandler {
     private var hashedDeviceID: String
     
     init?(deviceID: String) {
-        guard let ipAddrAndPara = EventHandler.readIpAndPara(filename: "ipAddrAndPara", fileEnding: "txt") else {
+        guard let ipAddrAndPara = EventHandler.readIpAndPara(filename: "para", fileEnding: "txt") else {
             print("Unable to extract data from file")
             return nil
         }

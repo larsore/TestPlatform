@@ -2,15 +2,27 @@ from flask import Flask, request, Response
 from flask_cors import cross_origin
 import json
 from rpHandler import Handler
+import socket
 
 app = Flask(__name__)
 
 responseHandler = Handler(RPID="http://ntnumaster:5050")
 macClientUrl = ""
 iPhoneClientUrl = ""
+baseUrl = ""
 
 def loadIpAndPara():
-    file = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/ipAddrAndPara.txt", "r")
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    baseUrl = "http://"+s.getsockname()[0]
+    f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+    f.write(baseUrl)
+    f.close()
+    macClientUrl = baseUrl+":3000"
+    s.close() 
+
+    file = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/para.txt", "r")
     parameters = {
         "q": None,
         "beta": None,
@@ -21,13 +33,8 @@ def loadIpAndPara():
         "eta": None
     }
     for line in file:
-        words = line.split("=")
-        if words[0] == "url":
-            macClientUrl = words[1]+":3000"
-            f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
-            f.write(words[1])
-            f.close()
-        elif words[0] == "q":
+        words = line.split("=")   
+        if words[0] == "q":
             parameters["q"] = int(words[1])
         elif words[0] == "beta":
             parameters["beta"] = int(words[1])
@@ -106,7 +113,7 @@ def clientAuthenticatorRegisterResponse():
     for key in body.keys():
         body[key] = str(body[key])
 
-    requiredKeys = ["public_key_t", "public_key_seed", "credential_id", "client_data", "authenticator_id", "username"]
+    requiredKeys = ["public_key_t", "public_key_seed", "credential_id", "client_data", "username"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     response = responseHandler.handleRegisterResponse(body)
@@ -119,7 +126,7 @@ def clientAuthenticatorAuthenticateResponse():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["omega", "c", "z1", "z2", "authenticator_data", "username", "rp_id", "clientData"]
+    requiredKeys = ["omega", "c", "z1", "z2", "authenticator_data", "username", "client_data"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     response = responseHandler.handleLoginResponse(body)

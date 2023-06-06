@@ -111,7 +111,7 @@ class CommunicateWithServer {
             "z2":signature.z2Coeffs,
             "c":signature.cHex,
             "authenticator_id": hashedDeviceID,
-            "clientData": clientData
+            "client_data": clientData
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")

@@ -289,16 +289,23 @@ class DilithiumLite {
             cCoeffs[i] = cCoeffs[j]
             cCoeffs[j] = Python.int(pow(-1.0, Double(s[i-start])))
         }
-        return cCoeffs
+        return self.np.polynomial.Polynomial(cCoeffs)
     }
     
-    private func getChallenge(Aseed: PythonObject, t: PythonObject, omega: PythonObject, message: PythonObject) -> Challenge {
+    private func getChallenge(A: PythonObject, t: PythonObject, omega: PythonObject, message: PythonObject) -> Challenge {
         let h = self.hashlib.shake_256()
-        h.update(Aseed)
+        var ACoeffs: [[PythonObject]] = []
         var tCoeffs: [PythonObject] = []
+        //TODO: Bruk self.getCoefficients i stedet for t
         for i in 0..<self.n {
             tCoeffs.append(t[i].coef)
+            var ACoeffsRow: [PythonObject] = []
+            for j in 0..<self.m {
+                ACoeffsRow.append(A[i][j].coef)
+            }
+            ACoeffs.append(ACoeffsRow)
         }
+        h.update(self.np.array(ACoeffs).tobytes())
         h.update(self.np.array(tCoeffs).tobytes())
         h.update(omega)
         h.update(message)
@@ -307,7 +314,7 @@ class DilithiumLite {
         
         return Challenge(
             challengeHex: challengeHex,
-            challengePolynomial: self.np.polynomial.Polynomial(self.hashToBall(seed: h.hexdigest(48).encode()))
+            challengePolynomial: self.hashToBall(seed: h.hexdigest(48).encode())
         )
     }
     
@@ -349,7 +356,7 @@ class DilithiumLite {
             let omega = self.hashlib.shake_256()
             omega.update(self.np.array(self.getCoefficients(polyList: w)).tobytes())
             
-            let c = self.getChallenge(Aseed: Python.str(sk.Aseed).encode(), t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
+            let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
 
             var cs1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {

@@ -60,7 +60,7 @@ export class Register extends React.Component {
         }
         Register.changeLabel("RPregResponse", "Register information recieved from RP server")
         
-        const rp_id = RPdata["rp"]["id"];
+        const rp_id = RPdata["rp_id"];
         const challenge = RPdata["challenge"];
         const timeout = RPdata["timeout"];
         
@@ -106,8 +106,7 @@ export class Register extends React.Component {
                 "credential_id": pollingData["credential_id"],
                 "public_key_t": pollingData["public_key_t"],
                 "public_key_seed": pollingData["public_key_seed"],
-                "client_data": pollingData["client_data"],
-                "authenticator_id": pollingData["authenticator_id"]
+                "client_data": pollingData["client_data"]
             })
         };
         const RPresponseResponse = await fetch(Register.RPUrl+'/authenticator/register', RPresponseOptions);

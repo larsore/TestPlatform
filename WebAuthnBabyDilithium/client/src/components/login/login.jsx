@@ -104,8 +104,7 @@ export class Login extends React.Component {
                 "c": pollingData["c"],
                 "z1": pollingData["z1"],
                 "z2": pollingData["z2"],
-                "rp_id": rp_id,
-                "clientData": pollingData["clientData"]
+                "client_data": pollingData["client_data"]
             })
         };
         const RPresponseResponse = await fetch(Login.RPUrl+'/authenticator/authenticate', RPresponseOptions);

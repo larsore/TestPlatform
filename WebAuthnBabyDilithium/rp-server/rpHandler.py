@@ -23,7 +23,6 @@ class Handler:
     timers = {}
     timeout = 30 #sekunder
 
-    RPName = "NTNU Master"
     RPID = None
 
     dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
@@ -78,6 +77,9 @@ class Handler:
     def handleLogin(cls, body):
         if body["username"] not in list(cls.credentials):
             return json.dumps("User with username: '"+body["username"]+"' has not registered...")
+        
+        if body["username"] in list(cls.isActive.keys()) and cls.isActive[body["username"]]["A"]:
+            return json.dumps(body["username"]+" is in the middle of an authentication procedure...")
     
         challenge = Handler.getChallenge()
         cls.credentials[body["username"]]["challenge"] = challenge
@@ -85,14 +87,12 @@ class Handler:
         credID = cls.credentials[body["username"]]["A"]["credential_id"]
         authID = cls.credentials[body["username"]]["authenticator_id"]
 
-        if body["username"] in list(cls.isActive.keys()) and cls.isActive[body["username"]]["A"]:
-            return json.dumps(body["username"]+" is in the middle of an authentication procedure...")
-
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], False ,))
         cls.timers[body["username"]].start()
+        
         cls.credentials[body["username"]]["timedOut"] = False
-        print("Timer for %s has started" %(body["username"]))
         cls.isActive[body["username"]]["A"] = True
+        
         return json.dumps({
             "rp_id":cls.RPID,
             "challenge":challenge,
@@ -120,7 +120,7 @@ class Handler:
             "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
         }
 
-        if h1.hexdigest() == body["clientData"] and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
+        if h1.hexdigest() == body["client_data"] and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
             if not cls.credentials[body["username"]]["timedOut"]:
                 cls.timers[body["username"]].cancel()
                 cls.credentials[body["username"]]["completed"] = True    
@@ -162,14 +162,10 @@ class Handler:
 
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], True ,))
         cls.timers[body["username"]].start()
-        print("Timer for %s has started" %(body["username"]))
 
         return json.dumps({
             "challenge": challenge,
-            "rp": {
-                "id": cls.RPID,
-                "name": cls.RPName
-            },
+            "rp_id": cls.RPID,
             "timeout": cls.timeout
         })
 
@@ -222,7 +218,7 @@ class Handler:
             if len(list(docs)) == 0:
                 doc = {
                     "username":body["username"],
-                    "authenticator_id":body["authenticator_id"],
+                    "authenticator_id":cls.credentials[body["username"]]["authenticator_id"],
                     "credential_id":body["credential_id"],
                     "pubKey":{
                         "t": json.loads(body["public_key_t"]),
@@ -285,7 +281,7 @@ class Handler:
             taken.append(j)
             cCoeffs[i] = cCoeffs[j]
             cCoeffs[j] = (-1)**int(s[i-start])
-        return cCoeffs
+        return Polynomial(cCoeffs)
 
     @classmethod
     def expandA(cls, seed):
@@ -321,8 +317,15 @@ class Handler:
         z2 = sig["z2"]
         c = sig["c"]
 
+        ACoeffs = []
+        for row in A:
+            r = []
+            for poly in row:
+                r.append(poly.coef)
+            ACoeffs.append(r)
+
         h = shake_256()
-        h.update(pubKey["Aseed"].encode())
+        h.update(np.array(ACoeffs).tobytes())
         h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
         h.update(omega.encode())
         h.update(clientData.encode())
@@ -331,7 +334,7 @@ class Handler:
             print("Not the same challenge")
             return False
         
-        cPoly = Polynomial(cls.hashToBall(h.hexdigest(48).encode()))
+        cPoly = cls.hashToBall(h.hexdigest(48).encode())
         ct = np.array([cPoly*p for p in t])
         r = np.inner(A, z1)+z2-ct
         r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])

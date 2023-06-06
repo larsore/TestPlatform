@@ -174,8 +174,7 @@ class Handler:
                 "credential_id": registerRequest["credential_id"],
                 "public_key_t": registerRequest["public_key_t"],
                 "public_key_seed": registerRequest["public_key_seed"],
-                "client_data": registerRequest["client_data"],
-                "authenticator_id": registerRequest["authenticator_id"]
+                "client_data": registerRequest["client_data"]
             }
 
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
@@ -205,7 +204,7 @@ class Handler:
                 "c": authenticateRequest["c"],
                 "z1": authenticateRequest["z1"],
                 "z2": authenticateRequest["z2"],
-                "clientData": authenticateRequest["clientData"]
+                "client_data": authenticateRequest["client_data"]
             }
 
         return json.dumps({"success": "NS Auth Auth"})

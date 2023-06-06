@@ -2,24 +2,28 @@ from flask import Flask, request
 from flask_cors import cross_origin
 import json
 from pollingHandler import Handler
+import socket
 
 app = Flask(__name__)
 
 pollingHandler = Handler()
 macClientUrl = ""
 iPhoneClientUrl = ""
+baseUrl = ""
 
 def loadIp():
-    file = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/ipAddrAndPara.txt", "r")
-    for line in file:
-        words = line.split("=")
-        if words[0] == "url":
-            macClientUrl = words[1]+":3000"
-            f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
-            f.write(words[1])
-            f.close()
-            return True
-    return False
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    baseUrl = "http://"+s.getsockname()[0]
+    f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+    f.write(baseUrl)
+    f.close()
+    macClientUrl = baseUrl+":3000"
+    s.close()
+
+    if macClientUrl == "":
+        return False
+    return True
     
 
 def checkKeys(requiredKeys, keys):
@@ -102,7 +106,7 @@ def authenticatorAuthenticate():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id", "clientData"]
+    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id", "client_data"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)
