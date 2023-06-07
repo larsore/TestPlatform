@@ -134,20 +134,16 @@ class EventHandler {
             print("Failed to read secret key from keychain")
             return
         }
-        print("Correct secret key retrieved from keychain")
-        
         guard let secretKey = try? JSONDecoder().decode(DilithiumLite.SecretKey.self, from: data) else {
             print("Unable to decode secret key")
             return
         }
-        
         let sig = dilithiumLite.sign(sk: secretKey, message: clientData)
         
         guard let authenticatorData = String(hashlib.sha256(Python.str(RP_ID).encode()).hexdigest()) else {
             print("Unable to convert authenticatorData python hash to a SWIFT String")
             return
         }
-        
         Task {
             do {
                 try await CommunicateWithServer.postResponse(signature: sig,
@@ -160,7 +156,6 @@ class EventHandler {
                 return
             }
         }
-        print("Signature and authenticator data sent to pollingServer")
     }
     
     
