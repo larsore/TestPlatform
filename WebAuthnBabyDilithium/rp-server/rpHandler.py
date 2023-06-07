@@ -346,6 +346,12 @@ class Handler:
         max = cls.approxBeta
         min = -cls.approxBeta
         concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
+
+        '''
+        if np.any(concatenatedList > max) or np.any(concatenatedList < min):
+            print("z1 or z2 not short...")
+            return False
+        '''
         
         for coeff in concatenatedList:
             if coeff > max:
