@@ -345,7 +345,7 @@ class Handler:
         
         concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
 
-        if np.any(np.absolute(concatenatedList) > max):
+        if np.any(np.absolute(concatenatedList) > cls.approxBeta):
             print("z1 or z2 not short...")
             return False
         
