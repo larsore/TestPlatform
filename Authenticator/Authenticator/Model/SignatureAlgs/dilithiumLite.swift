@@ -296,7 +296,6 @@ class DilithiumLite {
         let h = self.hashlib.shake_256()
         var ACoeffs: [[PythonObject]] = []
         var tCoeffs: [PythonObject] = []
-        //TODO: Bruk self.getCoefficients i stedet for t
         for i in 0..<self.n {
             tCoeffs.append(t[i].coef)
             var ACoeffsRow: [PythonObject] = []
