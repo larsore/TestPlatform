@@ -345,7 +345,6 @@ class DilithiumLite {
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
         let rho1 = self.getRandomBytes(count: 32)
         let rho2 = self.getRandomBytes(count: 32)
-        var k = 1
         var kappa = 0
         while true {
             let y1 = self.expandMask(seed: self.np.array(rho1).tobytes(), kappa: kappa, noOfPoly: self.m)
@@ -376,7 +375,6 @@ class DilithiumLite {
                 z2[i] = self.np.polynomial.Polynomial(divmodRes)
             }
             if rejectionSampling(z1: z1, z2: z2) {
-                print("Success at attempt number "+String(k))
                 return Signature(
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
@@ -384,7 +382,6 @@ class DilithiumLite {
                     omega: String(omega.hexdigest(48))!
                 )
             }
-            k += 1
             kappa += self.n
         }
     }
