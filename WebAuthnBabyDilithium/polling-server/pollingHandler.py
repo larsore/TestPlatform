@@ -61,7 +61,7 @@ class Handler:
             }
             timeout = int(registerRequest["timeout"])
             waitedTime = 0
-            interval = 0.5
+            interval = 0.1
             while waitedTime <= timeout:
                 waitedTime += interval
                 time.sleep(interval)
@@ -101,7 +101,7 @@ class Handler:
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = False
             timeout = int(authenticateRequest["timeout"])
             waitedTime = 0
-            interval = 0.5
+            interval = 0.1
             while waitedTime <= timeout:
                 waitedTime += interval
                 time.sleep(interval)
@@ -148,6 +148,8 @@ class Handler:
     @classmethod
     def handleDismissal(cls, req):
         if req["action"] == "auth":
+            if cls.activeRequests[req["authenticator_id"]]["timedOut"]:
+                return json.dumps({"success": "Already timed out"})
             cls.isActive[req["authenticator_id"]]["A"] = False
             cls.activeRequests[req["authenticator_id"]]["dismissed"] = True
         else:
@@ -186,8 +188,6 @@ class Handler:
 
     @classmethod
     def handlePOSTAuthenticatorAuthenticate(cls, authenticateRequest):
-        print(list(authenticateRequest.keys()))
-
         if cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"]:
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = False
             return json.dumps({"success": "Timed Out"})

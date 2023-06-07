@@ -352,8 +352,7 @@ class DilithiumLite {
             let y2 = self.expandMask(seed: self.np.array(rho2).tobytes(), kappa: kappa, noOfPoly: self.n)
             
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
-            let omega = self.hashlib.shake_256()
-            omega.update(self.np.array(self.getCoefficients(polyList: w)).tobytes())
+            let omega = self.hashlib.shake_256(self.np.array(self.getCoefficients(polyList: w)).tobytes())
             
             let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
 

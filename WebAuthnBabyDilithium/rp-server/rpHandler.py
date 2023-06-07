@@ -40,7 +40,6 @@ class Handler:
                     "credential_id": doc["credential_id"],
                     "pubKey": doc["pubKey"]
                 },
-                "completed": False,
                 "timedOut": False
             }
             cls.isActive[doc["username"]] = {
@@ -103,10 +102,17 @@ class Handler:
     
     @classmethod
     def handleLoginResponse(cls, body):
+        if cls.credentials[body["username"]]["timedOut"]:
+            cls.credentials[body["username"]]["timedOut"] = False
+            return json.dumps({
+                "msg": "Timed out!", 
+                "reason": "timeout"})
+        
         cls.isActive[body["username"]]["A"] = False
-        h1 = sha256()
-        h1.update(cls.RPID.encode())
-        h1.update(cls.credentials[body["username"]]["challenge"].encode())
+       
+        expectedHash = sha256()
+        expectedHash.update(cls.RPID.encode())
+        expectedHash.update(cls.credentials[body["username"]]["challenge"].encode())
 
         pubKey = cls.credentials[body["username"]]["A"]["pubKey"]
         pubKeyVerify = {
@@ -119,17 +125,9 @@ class Handler:
             "z1": Handler.coeffsToPolynomial(np.array(json.loads(body["z1"]), dtype=int)),
             "z2": Handler.coeffsToPolynomial(np.array(json.loads(body["z2"]), dtype=int))
         }
-
-        if h1.hexdigest() == body["client_data"] and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=h1.hexdigest()):
-            if not cls.credentials[body["username"]]["timedOut"]:
-                cls.timers[body["username"]].cancel()
-                cls.credentials[body["username"]]["completed"] = True    
-                return json.dumps("Successfully logged in as "+body["username"])
-            cls.credentials[body["username"]]["timedOut"] = False
-            return json.dumps({
-                "msg": "Timed out!", 
-                "reason": "timeout"})
-        cls.isActive[body["username"]]["A"] = False
+        if expectedHash.hexdigest() == body["client_data"] and sha256(cls.RPID.encode()).hexdigest() == body["authenticator_data"] and Handler.verifySig(pubKey=pubKeyVerify, sig=signature, clientData=expectedHash.hexdigest()):
+            cls.timers[body["username"]].cancel()
+            return json.dumps("Successfully logged in as "+body["username"])
         return json.dumps({
             "msg": "clientDataJSON, authData or signature failed!", 
             "reason": "cryptoVerificationFailure"})
@@ -151,7 +149,6 @@ class Handler:
                 "credential_id": "",
                 "pubKey": {}
             },
-            "completed": False,
             "timedOut": False
         }
 
@@ -174,14 +171,13 @@ class Handler:
         print("TIMEOUT for", username)
         if username not in list(cls.credentials.keys()):
             return
-        if cls.credentials[username]["completed"]:
-            if isReg:
-                cls.isActive[username]["R"] = False
-                return
-            else:
-                cls.isActive[username]["A"] = False
-                return
         cls.credentials[username]["timedOut"] = True
+        if isReg:
+            cls.isActive[username]["R"] = False
+            return
+        else:
+            cls.isActive[username]["A"] = False
+            return
 
     @staticmethod
     def coeffsToPolynomial(coeffs):
@@ -226,7 +222,6 @@ class Handler:
                     }
                 }
                 cls.credentialCollection.insert_one(doc)
-                cls.credentials[body["username"]]["completed"] = True
                 cls.credentials[body["username"]]["A"]["credential_id"] = body["credential_id"]
                 dictPubKey = {
                     "t": np.array(json.loads(body["public_key_t"]), dtype=int),
