@@ -297,8 +297,8 @@ class Handler:
                     sample = h.digest(3)
                     b0 = int(bin(sample[0]), 2)
                     b1 = int(bin(sample[1]), 2)
-                    b2mark = int('0'+bin(sample[2])[2:].rjust(8, '0')[1:], 2)
-                    candid = b2mark*2**(16)+b1*2**(8)+b0
+                    b2prime = int('0'+bin(sample[2])[2:].rjust(8, '0')[1:], 2)
+                    candid = b2prime*2**(16)+b1*2**(8)+b0
                     if candid < cls.q:
                         coefs.append(candid)
                     repr+=1
@@ -336,10 +336,10 @@ class Handler:
         
         cPoly = cls.hashToBall(h.hexdigest(48).encode())
         ct = np.array([cPoly*p for p in t])
-        r = np.inner(A, z1)+z2-ct
-        r = np.array([Polynomial((p % cls.f).coef % cls.q) for p in r])
+        omegaprime = np.inner(A, z1)+z2-ct
+        omegaprime = np.array([Polynomial((p % cls.f).coef % cls.q) for p in omegaprime])
 
-        if not shake_256(np.array(Handler.polynomialToCoeffs(r), dtype=int).tobytes()).hexdigest(48) == omega:
+        if not shake_256(np.array(Handler.polynomialToCoeffs(omegaprime), dtype=int).tobytes()).hexdigest(48) == omega:
             print("Signature is not equal...")
             return False
         

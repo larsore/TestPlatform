@@ -20,7 +20,7 @@ export class Register extends React.Component {
 
     async handleRegister() {
 
-        await fetch(raw)
+        await fetch(raw) //raw is the contents of 'baseUrl.txt'
             .then(r => r.text())
             .then(text => {
                 Register.RPUrl = text+":5050";

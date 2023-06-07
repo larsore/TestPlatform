@@ -87,13 +87,13 @@ class DilithiumLite {
                 let sample = h.digest(5)
                 let b0 = Int(sample[0])!
                 let b1 = Int(sample[1])!
-                let b2mark = Int(sample[2])! & 15
-                let b2markmark = Int(sample[2])! / 16
+                let b2prime = Int(sample[2])! & 15
+                let b2primeprime = Int(sample[2])! / 16
                 let b3 = Int(sample[3])!
                 let b4 = Int(sample[4])!
                 
-                let candids = [b2mark*NSDecimalNumber(decimal: pow(2, 16)).intValue + b1*NSDecimalNumber(decimal: pow(2, 8)).intValue + b0,
-                               b4*NSDecimalNumber(decimal: pow(2, 12)).intValue + b3*NSDecimalNumber(decimal: pow(2, 4)).intValue + b2markmark]
+                let candids = [b2prime*NSDecimalNumber(decimal: pow(2, 16)).intValue + b1*NSDecimalNumber(decimal: pow(2, 8)).intValue + b0,
+                               b4*NSDecimalNumber(decimal: pow(2, 12)).intValue + b3*NSDecimalNumber(decimal: pow(2, 4)).intValue + b2primeprime]
                 for candid in candids {
                     if candid < 2*(self.approxBeta+self.gamma)+1 {
                         coefs.append(candid - (self.approxBeta+self.gamma))
@@ -215,9 +215,9 @@ class DilithiumLite {
         for i in 32..<64 {
             rho2 += String(sample[i])!
         }
-        var rhomark = ""
+        var rhoprime = ""
         for i in 64..<96 {
-            rhomark += String(sample[i])!
+            rhoprime += String(sample[i])!
         }
         let s1 = self.expandS(seed: Python.str(rho1).encode(), noOfPoly: self.m)
         let s2 = self.expandS(seed: Python.str(rho2).encode(), noOfPoly: self.n)
@@ -225,7 +225,7 @@ class DilithiumLite {
         let sk = SecretKey(
             s1Coeffs: self.getCoefficients(polyList: s1),
             s2Coeffs: self.getCoefficients(polyList: s2),
-            Aseed: rhomark
+            Aseed: rhoprime
         )
         let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)

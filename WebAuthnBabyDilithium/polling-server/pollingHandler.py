@@ -81,8 +81,6 @@ class Handler:
     
     @classmethod
     def handlePOSTClientAuthenticate(cls, authenticateRequest):
-        print(authenticateRequest)
-
         if authenticateRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[authenticateRequest["authenticator_id"]]["A"]:
             return json.dumps("Authenticator is in the middle of an authentication procedure")
         
@@ -99,7 +97,6 @@ class Handler:
                 "client_data": authenticateRequest["client_data"],
                 "username": authenticateRequest["username"]
             })
-
             cls.isActive[authenticateRequest["authenticator_id"]]["A"] = True
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = False
             timeout = int(authenticateRequest["timeout"])
@@ -108,7 +105,6 @@ class Handler:
             while waitedTime <= timeout:
                 waitedTime += interval
                 time.sleep(interval)
-                print("Waited for ", waitedTime, " seconds...")
                 if cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"]:
                     cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"] = False
                     return json.dumps("Authenticator chose to dismiss the authentication attempt")
@@ -121,7 +117,6 @@ class Handler:
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = True
             cls.isActive[authenticateRequest["authenticator_id"]]["A"] = False
             return json.dumps("Timeout")
-        
         return json.dumps("Pending authentication request already exists for the given authenticator")
 
     
