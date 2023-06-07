@@ -15,7 +15,7 @@ def loadIpAndPara():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     baseUrl = "http://"+s.getsockname()[0]
-    f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+    f = open("/Users/larsore/Documents/Master/TestPlatform/client/src/components/login/baseUrl.txt", "w")
     f.write(baseUrl)
     f.close()
 

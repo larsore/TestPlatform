@@ -15,10 +15,9 @@ def loadIp():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     baseUrl = "http://"+s.getsockname()[0]
-    f = open("/Users/larsore/Documents/Master/TestPlatform/WebAuthnBabyDilithium/client/src/components/login/baseUrl.txt", "w")
+    f = open("/Users/larsore/Documents/Master/TestPlatform/client/src/components/login/baseUrl.txt", "w")
     f.write(baseUrl)
     f.close()
-
     fRead = open("/Users/larsore/Documents/Master/TestPlatform/Authenticator/Authenticator/Model/para.txt", "r")
     lines = []
     for line in fRead:
@@ -31,17 +30,12 @@ def loadIp():
     for line in lines:
         fWrite.write(line)
     fWrite.close()
-
-    
-
     macClientUrl = baseUrl+":3000"
     s.close()
-
     if macClientUrl == "":
         return False
     return True
     
-
 def checkKeys(requiredKeys, keys):
     if len(requiredKeys) > len(keys):
         return False
