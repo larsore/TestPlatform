@@ -145,8 +145,8 @@ struct authenticatorView: View {
                 .padding(50)
         }
         .background(backgroundGradient)
-        //.onAppear(perform: eventHandler?.testCrypto)
-        .onAppear(perform: startTimer)
+        .onAppear(perform: eventHandler?.test)
+        //.onAppear(perform: startTimer)
     }
     
     func startTimer() {

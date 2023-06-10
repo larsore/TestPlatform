@@ -319,17 +319,17 @@ class Handler:
                 r.append(poly.coef)
             ACoeffs.append(r)
 
-        h = shake_256()
-        h.update(np.array(ACoeffs).tobytes())
-        h.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
-        h.update(omega.encode())
-        h.update(clientData.encode())
+        expectedHash = shake_256()
+        expectedHash.update(np.array(ACoeffs).tobytes())
+        expectedHash.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
+        expectedHash.update(omega.encode())
+        expectedHash.update(clientData.encode())
 
-        if h.hexdigest(48) != c:
+        if expectedHash.hexdigest(48) != c:
             print("Not the same challenge")
             return False
         
-        cPoly = cls.hashToBall(h.hexdigest(48).encode())
+        cPoly = cls.hashToBall(expectedHash.hexdigest(48).encode())
         ct = np.array([cPoly*p for p in t])
         omegaprime = np.inner(A, z1)+z2-ct
         omegaprime = np.array([Polynomial((p % cls.f).coef % cls.q) for p in omegaprime])

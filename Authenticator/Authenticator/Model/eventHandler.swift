@@ -7,6 +7,7 @@
 
 import Foundation
 import PythonKit
+import Accelerate
 
 class EventHandler {
     
@@ -173,10 +174,47 @@ class EventHandler {
         return message
     }
     
-    func testCrypto() {
-        
-        let keypair = dilithiumLite.generateKeyPair()
-        let _ = dilithiumLite.sign(sk: keypair!.secretKey, message: "adsd")
+    func calculateMedian(array: [Int]) -> Float {
+        let sorted = array.sorted()
+        if sorted.count % 2 == 0 {
+            return Float((sorted[(sorted.count / 2)] + sorted[(sorted.count / 2) - 1])) / 2
+        } else {
+            return Float(sorted[(sorted.count - 1) / 2])
+        }
+    }
+    
+    func test() {
+        print("TESTING STARTED")
+        print("----------------------------------------")
+        let tests = 50
+        for beta in 3...7 {
+            dilithiumLite.changeBeta(beta: beta)
+            var n: Int
+            var m: Int
+            for i in 3...7 {
+                n = i
+                m = i-1
+                print("Testing for (n, m, beta) = (\(n), \(m), \(beta)")
+                dilithiumLite.changeNM(n: n, m: m)
+                var attempts: [Int] = []
+                var times: [Int] = []
+                for _ in 0..<tests {
+                    let keypair = dilithiumLite.generateKeyPair()
+                    let start = DispatchTime.now()
+                    let sig = dilithiumLite.sign(sk: keypair!.secretKey, message: "SFM's disciples")
+                    let stop = DispatchTime.now()
+                    times.append(Int(stop.uptimeNanoseconds - start.uptimeNanoseconds))
+                    attempts.append(sig.attempts)
+                }
+                print("Average attempts: \(attempts.reduce(0, +)/attempts.count)")
+                print("Median attempts: \(calculateMedian(array: attempts))")
+                print("Average times: \(times.reduce(0, +)/attempts.count)")
+                print("Median times: \(calculateMedian(array: times))")
+                print()
+            }
+        }
+        print("----------------------------------------")
+        print("TESTING DONE")
         
         /*
         let credID = "id11"

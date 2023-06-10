@@ -17,10 +17,10 @@ class DilithiumLite {
     private let hashlib: PythonObject
     
     private let q: Int
-    private let beta: Int
+    private var beta: Int
     private let d: Int
-    private let n: Int
-    private let m: Int
+    private var n: Int
+    private var m: Int
     private let gamma: Int
     private let eta: Int
     private let approxBeta: Int
@@ -68,6 +68,7 @@ class DilithiumLite {
         var z2Coeffs: [[Int]]
         var cHex: String
         var omega: String
+        var attempts: Int
     }
     
     struct Challenge {
@@ -346,6 +347,7 @@ class DilithiumLite {
         let rho1 = self.getRandomBytes(count: 32)
         let rho2 = self.getRandomBytes(count: 32)
         var kappa = 0
+        var k = 1
         while true {
             let y1 = self.expandMask(seed: self.np.array(rho1).tobytes(), kappa: kappa, noOfPoly: self.m)
             let y2 = self.expandMask(seed: self.np.array(rho2).tobytes(), kappa: kappa, noOfPoly: self.n)
@@ -379,9 +381,11 @@ class DilithiumLite {
                     z1Coeffs: self.getCoefficients(polyList: z1),
                     z2Coeffs: self.getCoefficients(polyList: z2),
                     cHex: c.challengeHex,
-                    omega: String(omega.hexdigest(48))!
+                    omega: String(omega.hexdigest(48))!,
+                    attempts: k
                 )
             }
+            k += 1
             kappa += self.n
         }
     }
@@ -402,5 +406,50 @@ class DilithiumLite {
             print("Unable to encode secret key as json")
             return nil
         }
+    }
+    //METHODS TO BE REMOVED!! ONLY FOR TESTING!!
+    static func getSignatureAsData(signature: Signature) -> Data? {
+        do {
+            let encoded = try JSONEncoder().encode(signature)
+            guard let keyAsUTF8 = String(data: encoded, encoding: .utf8) else {
+                print("Unable to encode json-encoded secret key to utf-8")
+                return nil
+            }
+            guard let keyAsData = keyAsUTF8.data(using: .utf8) else {
+                print("Unable to convert utf-8 encoded secret key to object of type 'Data'")
+                return nil
+            }
+            return keyAsData
+        } catch {
+            print("Unable to encode secret key as json")
+            return nil
+        }
+    }
+    
+    static func getPublicKeyAsData(publicKey: PublicKey) -> Data? {
+        do {
+            let encoded = try JSONEncoder().encode(publicKey)
+            guard let keyAsUTF8 = String(data: encoded, encoding: .utf8) else {
+                print("Unable to encode json-encoded secret key to utf-8")
+                return nil
+            }
+            guard let keyAsData = keyAsUTF8.data(using: .utf8) else {
+                print("Unable to convert utf-8 encoded secret key to object of type 'Data'")
+                return nil
+            }
+            return keyAsData
+        } catch {
+            print("Unable to encode secret key as json")
+            return nil
+        }
+    }
+    
+    func changeNM(n: Int, m: Int) {
+        self.n = n
+        self.m = m
+    }
+    
+    func changeBeta(beta: Int) {
+        self.beta = beta
     }
 }
