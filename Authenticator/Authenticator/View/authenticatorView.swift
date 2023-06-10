@@ -40,6 +40,9 @@ struct authenticatorView: View {
     @State var authAlertText = ""
     @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
+    @State private var seconds = 1
+    @State private var oldOtp = Int.random(in: 1...999999)
+    @State private var currentOtp = Int.random(in: 1...999999)
     let eventHandler = EventHandler(deviceID: UIDevice.current.identifierForVendor!.uuidString)
     
     var body: some View {
@@ -53,14 +56,26 @@ struct authenticatorView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(25)
                 
-                Button("Authenticator ID") {
+                /*Button("Authenticator ID") {
                     showDeviceID = true
                     showCheckMark = false
                     //eventHandler?.testCrypto()
                 }
                 .buttonStyle(GrowingButton())
-                .padding(20)
+                .padding(20)*/
                 
+                HStack {
+                    Text("Current one-time code:")
+                        .font(.headline)
+                        .foregroundColor(Color.black)
+                        .padding(2)
+                    Text("\(currentOtp)")
+                        .font(.headline)
+                        .foregroundColor(Color.black)
+                        .padding(2)
+                        .bold()
+                }
+                                
                 if showDeviceID {
                     VStack {
                         Text(deviceID)
@@ -87,11 +102,6 @@ struct authenticatorView: View {
                     }
                 }
             }
-            .refreshable {
-                Task {
-                    lastMessage = await pollServerFromView()
-                }
-            }
             .alert(registerAlertText, isPresented: $showRegisterAlert) {
                 Button("Register") {
                     guard let message: CommunicateWithServer.GetMessage = lastMessage else {
@@ -115,7 +125,7 @@ struct authenticatorView: View {
                         print("lastMessage not updated, still nil")
                         return
                     }
-                    eventHandler?.handleAuthentication(credential_ID: message.credential_id, RP_ID: message.rp_id, clientData: message.client_data)
+                    eventHandler?.handleAuthentication(credential_ID: message.credential_id, RP_ID: message.rp_id, clientData: message.client_data, randomInt: message.random_int)
                     isSigning = false
                     doneSigning = true
                     isDeciding = false
@@ -138,6 +148,20 @@ struct authenticatorView: View {
                     .scaleEffect(2, anchor: .center)
             }
             
+            HStack {
+                Text("New OTP in")
+                    .font(.headline)
+                    .foregroundColor(Color.white)
+                    .padding(2)
+                Text("\(seconds)")
+                    .font(.headline)
+                    .foregroundColor(Color.white)
+                    .padding(2)
+                Text("seconds")
+                    .font(.headline)
+                    .foregroundColor(Color.white)
+                    .padding(2)
+            }
             
             Text("Powered by Lars and Vegard")
                 .font(.callout)
@@ -151,6 +175,13 @@ struct authenticatorView: View {
     
     func startTimer() {
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true, block: {timer in
+            seconds -= 1
+            Task {
+                if seconds == 0 {
+                    seconds = 60
+                    await updateOtp()
+                }
+            }
             Task {
                 if !isDeciding {
                     lastMessage = await pollServerFromView()
@@ -158,6 +189,12 @@ struct authenticatorView: View {
             }
             
         })
+    }
+    
+    func updateOtp() async {
+        oldOtp = currentOtp
+        currentOtp = Int.random(in: 1...999999)
+        await eventHandler?.updateOtp(oldOtp: oldOtp, currentOtp: currentOtp)
     }
     
     func pollServerFromView() async -> CommunicateWithServer.GetMessage? {
@@ -170,7 +207,7 @@ struct authenticatorView: View {
                 registerAlertText = "Register \(message!.username) to \(message!.rp_id)?"
                 showRegisterAlert = true
             } else {
-                authAlertText = "Authenticate \(message!.username) to \(message!.rp_id)?"
+                authAlertText = "Authenticate \(message!.username) to \(message!.rp_id)?\nVerify code: \(message!.random_int)"
                 showAuthAlert = true
             }
             return message

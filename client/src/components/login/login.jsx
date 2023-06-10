@@ -52,7 +52,10 @@ export class Login extends React.Component {
             Login.changeLabel("RPloginResponse", RPdata)
             return
         }
-        Login.changeLabel("RPloginResponse", "Recieved challenge and other login information from RP-server")
+
+        const randomNumber = String(RPdata["random_int"]);
+
+        Login.changeLabel("RPloginResponse", "Verification code: "+randomNumber)
         
         const rp_id = RPdata["rp_id"];
         const challenge = RPdata["challenge"];
@@ -73,7 +76,8 @@ export class Login extends React.Component {
                 "client_data": clientData.hex(),
                 "timeout": timeout,
                 "username": username,
-                "credential_id": credID
+                "credential_id": credID,
+                "random_int": randomNumber
             })
         };
         const pollingResponse = await fetch(Login.pollingUrl+'/client/authenticate', pollingRequestOptions);
@@ -94,6 +98,20 @@ export class Login extends React.Component {
         }
         Login.changeLabel("authenticatorResponse", "Recieved signature from authenticator")
         
+        if (pollingData["random_int"] !== randomNumber) {
+            const loginFailedOptions = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    "username": username
+                })
+            };
+            await fetch(Login.RPUrl+'/authenticator/authenticate/failed', loginFailedOptions);
+            
+            Login.changeLabel("authenticatorResponse", "Not the same verification number");
+            return
+        }
+
         const RPresponseOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

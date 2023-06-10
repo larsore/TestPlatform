@@ -8,6 +8,7 @@ class Handler:
     activeRequests = {}
     responseToClient = {}
     isActive = {}
+    otpMapping = {}
 
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
     testplatformDB = myclient["FIDOServer"]
@@ -32,14 +33,18 @@ class Handler:
        
     @classmethod
     def handlePOSTClientRegister(cls, registerRequest):
+        if registerRequest['otp'] not in list(cls.otpMapping.keys()):
+            return json.dumps("OTP not valid")
 
-        if registerRequest["authenticator_id"] in list(cls.activeRequests.keys()):
-            if registerRequest["rp_id"] in cls.activeRequests[registerRequest["authenticator_id"]]["RPs"]:
+        authID = cls.otpMapping[registerRequest['otp']]
+
+        if authID in list(cls.activeRequests.keys()):
+            if registerRequest["rp_id"] in cls.activeRequests[authID]["RPs"]:
                 return json.dumps("Authenticator with specified ID has already registered with the given RP")
-        if registerRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[registerRequest["authenticator_id"]]["R"]:
+        if authID in list(cls.isActive.keys()) and cls.isActive[authID]["R"]:
                 return json.dumps("Authenticator is currently registrating...")
           
-        cls.activeRequests[registerRequest["authenticator_id"]] = {
+        cls.activeRequests[authID] = {
             "R": deque(),
             "A": deque(),
             "RPs": [],
@@ -47,15 +52,16 @@ class Handler:
             "timedOut": False
         }
 
-        if len(cls.activeRequests[registerRequest["authenticator_id"]]["R"]) == 0:
-            cls.activeRequests[registerRequest["authenticator_id"]]["R"].append({
+        if len(cls.activeRequests[authID]["R"]) == 0:
+            cls.activeRequests[authID]["R"].append({
                 "credential_id": "",
                 "rp_id": registerRequest["rp_id"],
                 "client_data": registerRequest["client_data"],
-                "username": registerRequest["username"]
+                "username": registerRequest["username"],
+                "random_int": ""
             })
 
-            cls.isActive[registerRequest["authenticator_id"]] = {
+            cls.isActive[authID] = {
                 "A": False,
                 "R": True
             }
@@ -65,16 +71,16 @@ class Handler:
             while waitedTime <= timeout:
                 waitedTime += interval
                 time.sleep(interval)
-                if cls.activeRequests[registerRequest["authenticator_id"]]["dismissed"]:
-                    cls.activeRequests.pop(registerRequest["authenticator_id"], None)
+                if cls.activeRequests[authID]["dismissed"]:
+                    cls.activeRequests.pop(authID, None)
                     return json.dumps("Authenticator chose to dismiss the registration attempt")
                 
-                if registerRequest["authenticator_id"] in list(cls.responseToClient.keys()):
-                    response = cls.responseToClient.pop(registerRequest["authenticator_id"], None)
-                    cls.isActive[registerRequest["authenticator_id"]]["R"] = False
+                if authID in list(cls.responseToClient.keys()):
+                    response = cls.responseToClient.pop(authID, None)
+                    cls.isActive[authID]["R"] = False
                     return json.dumps(response)
-            cls.activeRequests.pop(registerRequest["authenticator_id"], None)
-            cls.isActive.pop(registerRequest["authenticator_id"], None)
+            cls.activeRequests.pop(authID, None)
+            cls.isActive.pop(authID, None)
             return json.dumps("Timeout")
         return json.dumps("Pending registration already exists for the given authenticator")
     
@@ -95,7 +101,8 @@ class Handler:
                 "credential_id": authenticateRequest["credential_id"],
                 "rp_id": authenticateRequest["rp_id"],
                 "client_data": authenticateRequest["client_data"],
-                "username": authenticateRequest["username"]
+                "username": authenticateRequest["username"],
+                "random_int": authenticateRequest["random_int"]
             })
             cls.isActive[authenticateRequest["authenticator_id"]]["A"] = True
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = False
@@ -119,7 +126,13 @@ class Handler:
             return json.dumps("Timeout")
         return json.dumps("Pending authentication request already exists for the given authenticator")
 
-    
+
+    @classmethod
+    def handleAuthenticatorUpdate(cls, body):
+        cls.otpMapping.pop(body['old_otp'], None)
+        cls.otpMapping[body['current_otp']] = body['authenticator_id']
+        return json.dumps({"success": "OTP updated"})
+
     @classmethod
     def handlePOSTAuthenticator(cls, body):
         if body["authenticator_id"] not in list(cls.activeRequests.keys()):
@@ -129,20 +142,10 @@ class Handler:
         
         if len(activeRequests["R"]) != 0:
             request = activeRequests["R"].pop()
-            return json.dumps({
-                "credential_id": "",
-                "rp_id": request["rp_id"],
-                "client_data": request["client_data"],
-                "username": request["username"]
-            })
+            return json.dumps(request)
         elif len(activeRequests["A"]) != 0:
             request = activeRequests["A"].pop()
-            return json.dumps({
-                "credential_id": request["credential_id"],
-                "rp_id": request["rp_id"],
-                "client_data": request["client_data"],
-                "username": request["username"]
-            })
+            return json.dumps(request)
         return json.dumps("No pending requests for authenticator")
 
     @classmethod
@@ -171,7 +174,8 @@ class Handler:
                 "credential_id": registerRequest["credential_id"],
                 "public_key_t": registerRequest["public_key_t"],
                 "public_key_seed": registerRequest["public_key_seed"],
-                "client_data": registerRequest["client_data"]
+                "client_data": registerRequest["client_data"],
+                "authenticator_id": registerRequest["authenticator_id"]
             }
 
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
@@ -199,7 +203,8 @@ class Handler:
                 "c": authenticateRequest["c"],
                 "z1": authenticateRequest["z1"],
                 "z2": authenticateRequest["z2"],
-                "client_data": authenticateRequest["client_data"]
+                "client_data": authenticateRequest["client_data"],
+                "random_int": authenticateRequest["random_int"]
             }
 
         return json.dumps({"success": "NS Auth Auth"})

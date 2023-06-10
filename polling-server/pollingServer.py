@@ -46,6 +46,17 @@ def checkKeys(requiredKeys, keys):
         return True
     return False
 
+@app.route("/authenticator/update", methods=['POST'])
+def authenticatorUpdate():
+    body = request.json
+    for key in body.keys():
+        body[key] = str(body[key])
+    requiredKeys = ["old_otp", "current_otp", "authenticator_id"]
+    if not checkKeys(requiredKeys, list(body.keys())):
+        return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
+    response = pollingHandler.handleAuthenticatorUpdate(body)
+    return response
+
 # Authenticator API Route to check for incoming registration or authentication attempts
 @app.route("/authenticator/poll", methods=['POST'])
 def authenticatorPost():
@@ -63,10 +74,9 @@ def authenticatorPost():
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientRegister():
     body = request.json
-
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_id", "rp_id", "username", "client_data", "timeout"]
+    requiredKeys = ["otp", "rp_id", "username", "client_data", "timeout"]
 
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
@@ -81,7 +91,7 @@ def clientAuthenticate():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id", "timeout", "username"]
+    requiredKeys = ["authenticator_id", "rp_id", "client_data", "credential_id", "timeout", "username", "random_int"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTClientAuthenticate(body)
@@ -116,7 +126,7 @@ def authenticatorAuthenticate():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id", "client_data"]
+    requiredKeys = ["authenticator_data", "omega", "z1", "z2", "c", "authenticator_id", "client_data", "random_int"]
     if not checkKeys(list(body.keys()), requiredKeys):
         return json.dumps("The provided keys are not correct. The correct keys are " + ' '.join(requiredKeys))
     response = pollingHandler.handlePOSTAuthenticatorAuthenticate(body)

@@ -97,7 +97,8 @@ class Handler:
             "challenge":challenge,
             "credential_id":credID,
             "timeout":cls.timeout,
-            "authenticator_id":authID
+            "authenticator_id":authID,
+            "random_int": str(np.random.randint(low=1, high=100000))
         })
     
     @classmethod
@@ -137,13 +138,8 @@ class Handler:
         if body["username"] in list(cls.credentials.keys()):
             return json.dumps(body["username"]+" already registered")
         
-        for key in list(cls.credentials.keys()):
-            if body["authenticator_id"] == cls.credentials[key]["authenticator_id"]:
-                return json.dumps("Authenticator is already registered to another user.")
-        
         challenge = Handler.getChallenge()
         cls.credentials[body["username"]] = {
-            "authenticator_id": body["authenticator_id"], 
             "challenge": challenge,
             "A": {
                 "credential_id": "",
@@ -214,7 +210,7 @@ class Handler:
             if len(list(docs)) == 0:
                 doc = {
                     "username":body["username"],
-                    "authenticator_id":cls.credentials[body["username"]]["authenticator_id"],
+                    "authenticator_id":body["authenticator_id"],
                     "credential_id":body["credential_id"],
                     "pubKey":{
                         "t": json.loads(body["public_key_t"]),
@@ -228,6 +224,7 @@ class Handler:
                     "Aseed": str(body["public_key_seed"])
                 }
                 cls.credentials[body["username"]]["A"]["pubKey"] = dictPubKey
+                cls.credentials[body["username"]]["authenticator_id"] = body["authenticator_id"]
                 return json.dumps(body["username"]+" is now registered!")
             cls.credentials.pop(body["username"], None)
             return json.dumps({

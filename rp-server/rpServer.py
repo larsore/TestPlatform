@@ -96,7 +96,7 @@ def clientRegister():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["username", "authenticator_id"]
+    requiredKeys = ["username", "otp"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     responseBody = responseHandler.handleRegister(body)
@@ -126,7 +126,7 @@ def clientAuthenticatorRegisterResponse():
     for key in body.keys():
         body[key] = str(body[key])
 
-    requiredKeys = ["public_key_t", "public_key_seed", "credential_id", "client_data", "username"]
+    requiredKeys = ["public_key_t", "public_key_seed", "credential_id", "client_data", "username", "authenticator_id"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     response = responseHandler.handleRegisterResponse(body)

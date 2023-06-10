@@ -17,6 +17,7 @@ class CommunicateWithServer {
         let rp_id: String
         let client_data: String
         let username: String
+        let random_int: String
     }
     
     static func SetUrl(url: String) {
@@ -48,7 +49,9 @@ class CommunicateWithServer {
             print("Unable to get response from server")
             return nil
         }
-        return try JSONDecoder().decode(GetMessage.self, from: data)
+        let message = try JSONDecoder().decode(GetMessage.self, from: data)
+        print(message)
+        return message
     }
     
     private static func post(url: URL, body: [String: Any]) async throws -> Data? {
@@ -96,7 +99,7 @@ class CommunicateWithServer {
     
     
     //AUTHENTICATION POST
-    static func postResponse(signature: DilithiumLite.Signature, authenticatorData: String, hashedDeviceID: String, clientData: String) async throws {
+    static func postResponse(signature: DilithiumLite.Signature, authenticatorData: String, hashedDeviceID: String, clientData: String, randomInt: String) async throws {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
             return
@@ -111,7 +114,8 @@ class CommunicateWithServer {
             "z2":signature.z2Coeffs,
             "c":signature.cHex,
             "authenticator_id": hashedDeviceID,
-            "client_data": clientData
+            "client_data": clientData,
+            "random_int": randomInt
         ]
         guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
             print("Unable to get response from server")
@@ -154,6 +158,29 @@ class CommunicateWithServer {
                 let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
                 print("\(successInfo.success)")
             }
+        }
+    }
+    
+    static func updateOtp(oldOtp: Int, currentOtp: Int, authID: String) async throws {
+        guard let baseUrl = CommunicateWithServer.baseURL else {
+            print("BaseUrl not set")
+            return
+        }
+        guard let url = URL(string: baseUrl+"/update") else {
+            throw CommunicationError.InvalidURL
+        }
+        let body: [String: Any] = [
+            "old_otp": oldOtp,
+            "current_otp": currentOtp,
+            "authenticator_id": authID
+        ]
+        Task {
+            guard let data = try await CommunicateWithServer.post(url: url, body: body) else {
+                print("Unable to get update response from server")
+                return
+            }
+            let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+            print("\(successInfo.success)")
         }
     }
     

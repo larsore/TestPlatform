@@ -127,7 +127,7 @@ class EventHandler {
         }
     }
     
-    func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String) {
+    func handleAuthentication(credential_ID: String, RP_ID: String, clientData: String, randomInt: String) {
         guard let data = AccessKeychain.getItem(
             account: credential_ID,
             service: RP_ID
@@ -150,7 +150,8 @@ class EventHandler {
                 try await CommunicateWithServer.postResponse(signature: sig,
                                                              authenticatorData: authenticatorData,
                                                              hashedDeviceID: self.hashedDeviceID,
-                                                             clientData: clientData
+                                                             clientData: clientData,
+                                                             randomInt: randomInt
                 )
             } catch {
                 print("Unable to post authentication response...")
@@ -174,87 +175,8 @@ class EventHandler {
         return message
     }
     
-    func calculateMedian(array: [Int]) -> Float {
-        let sorted = array.sorted()
-        if sorted.count % 2 == 0 {
-            return Float((sorted[(sorted.count / 2)] + sorted[(sorted.count / 2) - 1])) / 2
-        } else {
-            return Float(sorted[(sorted.count - 1) / 2])
-        }
-    }
-    
-    func test() {
-        print("TESTING STARTED")
-        print("----------------------------------------")
-        let tests = 50
-        for beta in 3...7 {
-            dilithiumLite.changeBeta(beta: beta)
-            var n: Int
-            var m: Int
-            for i in 3...7 {
-                n = i
-                m = i-1
-                print("Testing for (n, m, beta) = (\(n), \(m), \(beta)")
-                dilithiumLite.changeNM(n: n, m: m)
-                var attempts: [Int] = []
-                var times: [Int] = []
-                for _ in 0..<tests {
-                    let keypair = dilithiumLite.generateKeyPair()
-                    let start = DispatchTime.now()
-                    let sig = dilithiumLite.sign(sk: keypair!.secretKey, message: "SFM's disciples")
-                    let stop = DispatchTime.now()
-                    times.append(Int(stop.uptimeNanoseconds - start.uptimeNanoseconds))
-                    attempts.append(sig.attempts)
-                }
-                print("Average attempts: \(attempts.reduce(0, +)/attempts.count)")
-                print("Median attempts: \(calculateMedian(array: attempts))")
-                print("Average times: \(times.reduce(0, +)/attempts.count)")
-                print("Median times: \(calculateMedian(array: times))")
-                print()
-            }
-        }
-        print("----------------------------------------")
-        print("TESTING DONE")
-        
-        /*
-        let credID = "id11"
-        let rpID = "rp id"
-        let encodedSecretKey = BabyDilithium.getSecretKeyAsData(secretKey: keypair.secretKey)!
-        
-        let sigBefore = babyDilithium.sign(sk: keypair.secretKey, message: "En random melding")
-        
-        
-        do {
-            try AccessKeychain.save(credentialID: credID,
-                                RPID: rpID,
-                                secretKey: encodedSecretKey)
-        } catch {
-            print(error)
-            return
-        }
-        print("Credentials saved to keychain")
-        
-        guard let data = AccessKeychain.get(
-            credentialID: credID,
-            RPID: rpID
-        ) else {
-            print("Failed to read secret key from keychain")
-            return
-        }
-        print("Correct secret key retrieved from keychain")
-        
-        guard let secretKey = try? JSONDecoder().decode(BabyDilithium.SecretKey.self, from: data) else {
-            print("Unable to decode secret key")
-            return
-        }
-        
-        let sigAfter = babyDilithium.sign(sk: secretKey, message: "En random melding")
-        
-        print(sigBefore)
-        print("------------------------------------------------------------------------------------")
-        print(sigAfter)
-        */
-
+    func updateOtp(oldOtp: Int, currentOtp: Int) async {
+        try? await CommunicateWithServer.updateOtp(oldOtp: oldOtp, currentOtp: currentOtp, authID: self.hashedDeviceID)
     }
     
 }

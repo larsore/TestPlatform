@@ -48,7 +48,7 @@ export class Register extends React.Component {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 "username": username,
-                "authenticator_id": hashedAuthID.hex()
+                "otp": authID
             })
         };
         const RPresponse = await fetch(Register.RPUrl+'/register', RPrequestOptions);
@@ -73,7 +73,7 @@ export class Register extends React.Component {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                "authenticator_id": hashedAuthID.hex(),
+                "otp": authID,
                 "rp_id": rp_id,
                 "client_data": clientData,
                 "timeout": timeout,
@@ -106,7 +106,8 @@ export class Register extends React.Component {
                 "credential_id": pollingData["credential_id"],
                 "public_key_t": pollingData["public_key_t"],
                 "public_key_seed": pollingData["public_key_seed"],
-                "client_data": pollingData["client_data"]
+                "client_data": pollingData["client_data"],
+                "authenticator_id": pollingData["authenticator_id"]
             })
         };
         const RPresponseResponse = await fetch(Register.RPUrl+'/authenticator/register', RPresponseOptions);
@@ -143,7 +144,7 @@ export class Register extends React.Component {
                             <input type="text" name='username' onChange={(e) => Register.username=e.target.value} placeholder='Username'/>
                         </div>
                         <div className="form-group">
-                            <input type="text" name='auth-id' onChange={(e) => Register.authID=e.target.value} placeholder='Auth-id'/>
+                            <input type="text" name='auth-id' onChange={(e) => Register.authID=e.target.value} placeholder='One time code'/>
                         </div>
                     </div>
                 </div>
