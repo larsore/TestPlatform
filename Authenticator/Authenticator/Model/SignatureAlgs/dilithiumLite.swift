@@ -36,6 +36,7 @@ class DilithiumLite {
         self.gamma = gamma
         self.eta = eta
         self.approxBeta = Int((q-1)/16)
+        print(self.approxBeta)
         
         PythonSupport.initialize()
         NumPySupport.sitePackagesURL.insertPythonPath()
