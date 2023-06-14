@@ -358,29 +358,18 @@ class DilithiumLite {
             
             let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
 
-            var cs1: [PythonObject] = []
+            var z1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
-                cs1.append(self.np.inner(c.challengePolynomial, s1[i]))
+                z1.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s1[i]).coef, self.f.coef)[1])+y2[i])
             }
-            let z1 = self.np.array(cs1) + y1
-            for i in 0..<Int(z1.size)! {
-                let divmodRes = self.np.polynomial.polynomial.polydiv(z1[i].coef, self.f.coef)[1]
-                z1[i] = self.np.polynomial.Polynomial(divmodRes)
+            var z2: [PythonObject] = []
+            for i in 0..<Int(s1.size)! {
+                z2.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s2[i]).coef, self.f.coef)[1])+y1[i])
             }
-            
-            var cs2: [PythonObject] = []
-            for i in 0..<Int(s2.size)! {
-                cs2.append(self.np.inner(c.challengePolynomial, s2[i]))
-            }
-            let z2 = self.np.array(cs2) + y2
-            for i in 0..<Int(z2.size)! {
-                let divmodRes = self.np.polynomial.polynomial.polydiv(z2[i].coef, self.f.coef)[1]
-                z2[i] = self.np.polynomial.Polynomial(divmodRes)
-            }
-            if rejectionSampling(z1: z1, z2: z2) {
+            if rejectionSampling(z1: self.np.array(z1), z2: self.np.array(z2)) {
                 return Signature(
-                    z1Coeffs: self.getCoefficients(polyList: z1),
-                    z2Coeffs: self.getCoefficients(polyList: z2),
+                    z1Coeffs: self.getCoefficients(polyList: self.np.array(z1)),
+                    z2Coeffs: self.getCoefficients(polyList: self.np.array(z2)),
                     cHex: c.challengeHex,
                     omega: String(omega.hexdigest(48))!,
                     attempts: k
