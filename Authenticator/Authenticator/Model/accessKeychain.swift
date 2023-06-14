@@ -28,19 +28,14 @@ class AccessKeychain {
             kSecAttrAccessControl as String: AccessKeychain.access as AnyObject,
             kSecValueData as String: item as AnyObject,
         ]
-        
         let status = SecItemAdd(query as CFDictionary, nil)
         
         guard status != errSecDuplicateItem else {
             throw KeychainError.duplicateEntry
         }
-        
         guard status == errSecSuccess else {
             throw KeychainError.unknown(status)
         }
-        
-        print("saved")
-        
     }
     
     static func getItem(account: String, service: String) -> Data? {
@@ -52,17 +47,9 @@ class AccessKeychain {
             kSecReturnData as String: kCFBooleanTrue,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-        
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
-        print("Read status: \(status)")
-        
         return result as? Data
-        
     }
-    
-    
-    
-    
 }

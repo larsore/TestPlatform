@@ -29,7 +29,12 @@ class Handler:
                 "A": False,
                 "R": False
             }
-        print(cls.activeRequests)
+        print('-----'+'REGISTERED AUTHENTICATORS'+'-----')
+        print('--'+'authenticator ID'+'--'+'RPs'+'--')
+        for key in list(cls.activeRequests.keys()):
+            rps = cls.activeRequests[key]["RPs"]
+            for rp in rps:
+                print(key, rp)
        
     @classmethod
     def handlePOSTClientRegister(cls, registerRequest):

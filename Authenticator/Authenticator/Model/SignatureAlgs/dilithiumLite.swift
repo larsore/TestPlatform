@@ -36,7 +36,6 @@ class DilithiumLite {
         self.gamma = gamma
         self.eta = eta
         self.approxBeta = Int((q-1)/16)
-        print(self.approxBeta)
         
         PythonSupport.initialize()
         NumPySupport.sitePackagesURL.insertPythonPath()
@@ -360,11 +359,11 @@ class DilithiumLite {
 
             var z1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
-                z1.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s1[i]).coef, self.f.coef)[1])+y2[i])
+                z1.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s1[i]).coef, self.f.coef)[1])+y1[i])
             }
             var z2: [PythonObject] = []
-            for i in 0..<Int(s1.size)! {
-                z2.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s2[i]).coef, self.f.coef)[1])+y1[i])
+            for i in 0..<Int(s2.size)! {
+                z2.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s2[i]).coef, self.f.coef)[1])+y2[i])
             }
             if rejectionSampling(z1: self.np.array(z1), z2: self.np.array(z2)) {
                 return Signature(

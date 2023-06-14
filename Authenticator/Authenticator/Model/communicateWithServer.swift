@@ -50,7 +50,6 @@ class CommunicateWithServer {
             return nil
         }
         let message = try JSONDecoder().decode(GetMessage.self, from: data)
-        print(message)
         return message
     }
     
@@ -93,8 +92,6 @@ class CommunicateWithServer {
             return
         }
         let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
-        print("Success with the following response: \(successInfo.success)")
-        
     }
     
     
@@ -122,8 +119,6 @@ class CommunicateWithServer {
             return
         }
         let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
-        print("Success with the following response: \(successInfo.success)")
-        
     }
     
     //DISMISSAL
@@ -156,7 +151,6 @@ class CommunicateWithServer {
                     return
                 }
                 let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
-                print("\(successInfo.success)")
             }
         }
     }
@@ -180,7 +174,6 @@ class CommunicateWithServer {
                 return
             }
             let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
-            print("\(successInfo.success)")
         }
     }
     

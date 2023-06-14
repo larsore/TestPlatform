@@ -323,7 +323,6 @@ class Handler:
         expectedHash.update(clientData.encode())
 
         if expectedHash.hexdigest(48) != c:
-            print("Not the same challenge")
             return False
         
         cPoly = cls.hashToBall(expectedHash.hexdigest(48).encode())
@@ -332,13 +331,11 @@ class Handler:
         omegaprime = np.array([Polynomial((p % cls.f).coef % cls.q) for p in omegaprime])
 
         if not shake_256(np.array(Handler.polynomialToCoeffs(omegaprime), dtype=int).tobytes()).hexdigest(48) == omega:
-            print("Signature is not equal...")
             return False
         
         concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
 
         if np.any(np.absolute(concatenatedList) > cls.approxBeta):
-            print("z1 or z2 not short...")
             return False
         
         return True

@@ -35,7 +35,6 @@ export class Register extends React.Component {
         const authID = Register.authID;
 
         if (username === "" || authID === "") {
-            console.log("Empty username and/or authID...");
             Register.changeLabel("RPregResponse", "Please fill in both a username and an authenticator ID");
             return
         }
