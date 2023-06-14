@@ -408,49 +408,4 @@ class DilithiumLite {
             return nil
         }
     }
-    //METHODS TO BE REMOVED!! ONLY FOR TESTING!!
-    static func getSignatureAsData(signature: Signature) -> Data? {
-        do {
-            let encoded = try JSONEncoder().encode(signature)
-            guard let keyAsUTF8 = String(data: encoded, encoding: .utf8) else {
-                print("Unable to encode json-encoded secret key to utf-8")
-                return nil
-            }
-            guard let keyAsData = keyAsUTF8.data(using: .utf8) else {
-                print("Unable to convert utf-8 encoded secret key to object of type 'Data'")
-                return nil
-            }
-            return keyAsData
-        } catch {
-            print("Unable to encode secret key as json")
-            return nil
-        }
-    }
-    
-    static func getPublicKeyAsData(publicKey: PublicKey) -> Data? {
-        do {
-            let encoded = try JSONEncoder().encode(publicKey)
-            guard let keyAsUTF8 = String(data: encoded, encoding: .utf8) else {
-                print("Unable to encode json-encoded secret key to utf-8")
-                return nil
-            }
-            guard let keyAsData = keyAsUTF8.data(using: .utf8) else {
-                print("Unable to convert utf-8 encoded secret key to object of type 'Data'")
-                return nil
-            }
-            return keyAsData
-        } catch {
-            print("Unable to encode secret key as json")
-            return nil
-        }
-    }
-    
-    func changeNM(n: Int, m: Int) {
-        self.n = n
-        self.m = m
-    }
-    
-    func changeBeta(beta: Int) {
-        self.beta = beta
-    }
 }
