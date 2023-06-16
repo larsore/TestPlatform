@@ -55,27 +55,17 @@ struct authenticatorView: View {
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(25)
-                
-                /*Button("Authenticator ID") {
-                    showDeviceID = true
-                    showCheckMark = false
-                    //eventHandler?.testCrypto()
-                }
-                .buttonStyle(GrowingButton())
-                .padding(20)*/
-                
                 HStack {
                     Text("Current one-time code:")
                         .font(.headline)
                         .foregroundColor(Color.black)
-                        .padding(2)
+                        .padding(1)
                     Text("\(currentOtp)")
                         .font(.headline)
                         .foregroundColor(Color.black)
-                        .padding(2)
+                        .padding(1)
                         .bold()
                 }
-                                
                 if showDeviceID {
                     VStack {
                         Text(deviceID)
@@ -136,9 +126,7 @@ struct authenticatorView: View {
                     isSigning = false
                 }
             }
-
             Spacer()
-                        
             if doneSigning {
                 Text("Completed")
                     .foregroundColor(Color.white)
@@ -147,29 +135,26 @@ struct authenticatorView: View {
                 ProgressView()
                     .scaleEffect(2, anchor: .center)
             }
-            
             HStack {
                 Text("New OTP in")
                     .font(.headline)
                     .foregroundColor(Color.white)
-                    .padding(2)
+                    .padding(1)
                 Text("\(seconds)")
                     .font(.headline)
                     .foregroundColor(Color.white)
-                    .padding(2)
+                    .padding(1)
                 Text("seconds")
                     .font(.headline)
                     .foregroundColor(Color.white)
-                    .padding(2)
+                    .padding(1)
             }
-            
             Text("Powered by Lars and Vegard")
                 .font(.callout)
                 .foregroundColor(Color.white)
                 .padding(50)
         }
         .background(backgroundGradient)
-        //.onAppear(perform: eventHandler?.test)
         .onAppear(perform: startTimer)
     }
     
@@ -187,7 +172,6 @@ struct authenticatorView: View {
                     lastMessage = await pollServerFromView()
                 }
             }
-            
         })
     }
     
@@ -216,7 +200,6 @@ struct authenticatorView: View {
         }
     }
 }
-
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {

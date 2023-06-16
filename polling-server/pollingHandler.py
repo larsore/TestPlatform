@@ -40,15 +40,12 @@ class Handler:
     def handlePOSTClientRegister(cls, registerRequest):
         if registerRequest['otp'] not in list(cls.otpMapping.keys()):
             return json.dumps("OTP not valid")
-
         authID = cls.otpMapping[registerRequest['otp']]
-
         if authID in list(cls.activeRequests.keys()):
             if registerRequest["rp_id"] in cls.activeRequests[authID]["RPs"]:
                 return json.dumps("Authenticator with specified ID has already registered with the given RP")
         if authID in list(cls.isActive.keys()) and cls.isActive[authID]["R"]:
                 return json.dumps("Authenticator is currently registrating...")
-          
         cls.activeRequests[authID] = {
             "R": deque(),
             "A": deque(),
@@ -56,7 +53,6 @@ class Handler:
             "dismissed": False,
             "timedOut": False
         }
-
         if len(cls.activeRequests[authID]["R"]) == 0:
             cls.activeRequests[authID]["R"].append({
                 "credential_id": "",
@@ -65,7 +61,6 @@ class Handler:
                 "username": registerRequest["username"],
                 "random_int": ""
             })
-
             cls.isActive[authID] = {
                 "A": False,
                 "R": True
@@ -78,8 +73,7 @@ class Handler:
                 time.sleep(interval)
                 if cls.activeRequests[authID]["dismissed"]:
                     cls.activeRequests.pop(authID, None)
-                    return json.dumps("Authenticator chose to dismiss the registration attempt")
-                
+                    return json.dumps("Authenticator chose to dismiss the registration attempt")               
                 if authID in list(cls.responseToClient.keys()):
                     response = cls.responseToClient.pop(authID, None)
                     cls.isActive[authID]["R"] = False
@@ -88,19 +82,15 @@ class Handler:
             cls.isActive.pop(authID, None)
             return json.dumps("Timeout")
         return json.dumps("Pending registration already exists for the given authenticator")
-    
-    
+        
     @classmethod
     def handlePOSTClientAuthenticate(cls, authenticateRequest):
         if authenticateRequest["authenticator_id"] in list(cls.isActive.keys()) and cls.isActive[authenticateRequest["authenticator_id"]]["A"]:
             return json.dumps("Authenticator is in the middle of an authentication procedure")
-        
         if authenticateRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps("Authenticator with specified ID has not registered")
-
         if authenticateRequest["rp_id"] not in cls.activeRequests[authenticateRequest["authenticator_id"]]["RPs"]:
             return json.dumps("Authenticator with specified ID has not registered with the given RP")
-
         if len(cls.activeRequests[authenticateRequest["authenticator_id"]]["A"]) == 0:
             cls.activeRequests[authenticateRequest["authenticator_id"]]["A"].append({
                 "credential_id": authenticateRequest["credential_id"],
@@ -119,8 +109,7 @@ class Handler:
                 time.sleep(interval)
                 if cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"]:
                     cls.activeRequests[authenticateRequest["authenticator_id"]]["dismissed"] = False
-                    return json.dumps("Authenticator chose to dismiss the authentication attempt")
-                
+                    return json.dumps("Authenticator chose to dismiss the authentication attempt")        
                 if authenticateRequest["authenticator_id"] in list(cls.responseToClient.keys()):
                     response = cls.responseToClient.pop(authenticateRequest["authenticator_id"], None)
                     cls.isActive[authenticateRequest["authenticator_id"]]["A"] = False
@@ -130,7 +119,6 @@ class Handler:
             cls.isActive[authenticateRequest["authenticator_id"]]["A"] = False
             return json.dumps("Timeout")
         return json.dumps("Pending authentication request already exists for the given authenticator")
-
 
     @classmethod
     def handleAuthenticatorUpdate(cls, body):
@@ -142,9 +130,7 @@ class Handler:
     def handlePOSTAuthenticator(cls, body):
         if body["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps("Authenticator with specified ID has not been registered")
-
         activeRequests = cls.activeRequests[body["authenticator_id"]]
-        
         if len(activeRequests["R"]) != 0:
             request = activeRequests["R"].pop()
             return json.dumps(request)
@@ -165,14 +151,12 @@ class Handler:
                 return json.dumps({"success": "Already timed out"})
             cls.activeRequests[req["authenticator_id"]]["dismissed"] = True
             cls.isActive[req["authenticator_id"]]["R"] = False
-        
         return json.dumps({"success": "Dismissed"})
 
     @classmethod
     def handlePOSTAuthenticatorRegister(cls, registerRequest):
         if registerRequest["authenticator_id"] not in list(cls.activeRequests.keys()):
             return json.dumps({"success": "Timed Out"})
-
         cls.activeRequests[registerRequest["authenticator_id"]]["RPs"].append(registerRequest["rp_id"])
         if registerRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
             cls.responseToClient[registerRequest["authenticator_id"]] = {
@@ -182,9 +166,7 @@ class Handler:
                 "client_data": registerRequest["client_data"],
                 "authenticator_id": registerRequest["authenticator_id"]
             }
-
         docs = cls.authenticatorCollection.find({"_id": registerRequest["authenticator_id"]})
-
         if len(list(docs)) > 0:           
             cls.authenticatorCollection.update_one({"_id": registerRequest["authenticator_id"]}, {"$push": {"RPs", registerRequest["rp_id"]}})
         else:
@@ -200,7 +182,6 @@ class Handler:
         if cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"]:
             cls.activeRequests[authenticateRequest["authenticator_id"]]["timedOut"] = False
             return json.dumps({"success": "Timed Out"})
-
         if authenticateRequest["authenticator_id"] not in list(cls.responseToClient.keys()):
             cls.responseToClient[authenticateRequest["authenticator_id"]] = {
                 "authenticator_data": authenticateRequest["authenticator_data"],
@@ -211,7 +192,6 @@ class Handler:
                 "client_data": authenticateRequest["client_data"],
                 "random_int": authenticateRequest["random_int"]
             }
-
         return json.dumps({"success": "NS Auth Auth"})
     
     @classmethod

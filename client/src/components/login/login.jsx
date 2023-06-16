@@ -18,7 +18,6 @@ export class Login extends React.Component {
     }
 
     async handleLogin() {
-
         await fetch(raw)
             .then(r => r.text())
             .then(text => {
@@ -141,7 +140,7 @@ export class Login extends React.Component {
             Login.changeLabel("RPfinalResponse", RPresponseData["reason"]+": "+RPresponseData["msg"]);
         } else {
             Login.changeLabel("RPfinalResponse", RPresponseData);
-            window.location.replace('https://www.youtube.com/watch?v=xvFZjo5PgG0?autoplay=1');
+            //window.location.replace('https://www.youtube.com/watch?v=xvFZjo5PgG0?autoplay=1');
         }
     }
 

@@ -32,16 +32,13 @@ class EventHandler {
             gamma: ipAddrAndPara.gamma,
             eta: ipAddrAndPara.eta
         )
-        
         self.hashlib = Python.import("hashlib")
         self.os = Python.import("os")
-        
         guard let hashedDeviceID = String(hashlib.sha256(Python.str(deviceID).encode()).hexdigest()) else {
             print("Unable to hash device-ID and convert it to a SWIFT String")
             return nil
         }
         self.hashedDeviceID = hashedDeviceID
-    
     }
     
     private struct PollingAddressAndParameters {
@@ -56,9 +53,7 @@ class EventHandler {
     }
     
     private static func readIpAndPara(filename: String, fileEnding: String) -> PollingAddressAndParameters? {
-    
         var pollingAddressAndParameters = PollingAddressAndParameters(q: 0, beta: 0, d: 0, n: 0, m: 0, gamma: 0, eta: 0, pollingUrl: "")
-        
         var lines = [String]()
         if let fileUrl = Bundle.main.url(forResource: filename, withExtension: fileEnding) {
             if let contents = try? String(contentsOf: fileUrl) {
@@ -102,9 +97,7 @@ class EventHandler {
             return
         }
         let credential_ID = UUID().uuidString
-        
         let encodedSecretKey = DilithiumLite.getSecretKeyAsData(secretKey: keyPair.secretKey)!
-        
         do {
             try AccessKeychain.saveItem(account: credential_ID,
                                 service: RP_ID,
@@ -160,8 +153,6 @@ class EventHandler {
         }
     }
     
-    
-    
     func handleDismiss(message: String, action: String) {
         Task {
             do {
@@ -178,5 +169,4 @@ class EventHandler {
     func updateOtp(oldOtp: Int, currentOtp: Int) async {
         try? await CommunicateWithServer.updateOtp(oldOtp: oldOtp, currentOtp: currentOtp, authID: self.hashedDeviceID)
     }
-    
 }

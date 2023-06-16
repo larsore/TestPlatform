@@ -24,10 +24,15 @@ class DilithiumLite {
     private let gamma: Int
     private let eta: Int
     private let approxBeta: Int
-    
     private let f: PythonObject
         
     init(q: Int, beta: Int, d: Int, n: Int, m: Int, gamma: Int, eta: Int) {
+        PythonSupport.initialize()
+        NumPySupport.sitePackagesURL.insertPythonPath()
+        self.np = Python.import("numpy")
+        self.os = Python.import("os")
+        self.hashlib = Python.import("hashlib")
+        
         self.q = q
         self.beta = beta
         self.d = d
@@ -36,13 +41,6 @@ class DilithiumLite {
         self.gamma = gamma
         self.eta = eta
         self.approxBeta = Int((q-1)/16)
-        
-        PythonSupport.initialize()
-        NumPySupport.sitePackagesURL.insertPythonPath()
-        self.np = Python.import("numpy")
-        self.os = Python.import("os")
-        self.hashlib = Python.import("hashlib")
-        
         let fCoeffs = np.array([1] + Array(repeating: 0, count: (self.d - 2)) + [1])
         self.f = self.np.polynomial.Polynomial(fCoeffs)
     }
@@ -167,7 +165,6 @@ class DilithiumLite {
                     let candid = b2Int * NSDecimalNumber(decimal: pow(2, 16)).intValue + b1 * NSDecimalNumber(decimal: pow(2, 8)).intValue + b0
                     if candid < self.q {
                         coefs.append(candid)
-                        
                     }
                     repr += 1
                 }
@@ -222,7 +219,6 @@ class DilithiumLite {
         }
         let s1 = self.expandS(seed: Python.str(rho1).encode(), noOfPoly: self.m)
         let s2 = self.expandS(seed: Python.str(rho2).encode(), noOfPoly: self.n)
-        
         let sk = SecretKey(
             s1Coeffs: self.getCoefficients(polyList: s1),
             s2Coeffs: self.getCoefficients(polyList: s2),
@@ -240,7 +236,6 @@ class DilithiumLite {
     private func rejectionSampling(z1: PythonObject, z2: PythonObject) -> Bool {
         var max = self.approxBeta
         var min = -self.approxBeta
-        
         let concatenatedList = self.getCoefficients(polyList: z1) + self.getCoefficients(polyList: z2)
         for l in concatenatedList {
             if l.max()! > max {
@@ -250,12 +245,10 @@ class DilithiumLite {
                 min = l.min()!
             }
         }
-        
         if max <= self.approxBeta && min >= -self.approxBeta {
             return true
         }
         return false
-        
     }
     
     private func hashToBall(seed: PythonObject) -> PythonObject {
@@ -275,7 +268,6 @@ class DilithiumLite {
                 break
             }
         }
-        
         var taken: [Int] = []
         let start = self.d - self.eta
         for i in start..<self.d {
@@ -309,9 +301,7 @@ class DilithiumLite {
         h.update(self.np.array(tCoeffs).tobytes())
         h.update(omega)
         h.update(message)
-        
         let challengeHex = String(h.hexdigest(48))!
-        
         return Challenge(
             challengeHex: challengeHex,
             challengePolynomial: self.hashToBall(seed: h.hexdigest(48).encode())
@@ -320,17 +310,14 @@ class DilithiumLite {
     
     private func coeffsToPolynomial(listOfCoeffs: [[Int]]) -> PythonObject {
         var poly: [PythonObject] = []
-        
         for coeffs in listOfCoeffs {
             poly.append(self.np.polynomial.Polynomial(np.array(coeffs)))
         }
-        
         return self.np.array(poly)
     }
     
     private func getLatticePoint(A: PythonObject, s: PythonObject, e: PythonObject) -> PythonObject {
         let res = self.np.inner(A, s)+e
-        
         for i in 0..<Int(res.size)! {
             let divmodRes = self.np.polynomial.polynomial.polydiv(res[i].coef, self.f.coef)[1]
             res[i] = self.np.polynomial.Polynomial(self.np.mod(divmodRes, self.q))
@@ -341,7 +328,6 @@ class DilithiumLite {
     func sign(sk: SecretKey, message: String) -> Signature {
         let s1 = self.coeffsToPolynomial(listOfCoeffs: sk.s1Coeffs)
         let s2 = self.coeffsToPolynomial(listOfCoeffs: sk.s2Coeffs)
-
         let A = self.expandA(seed: Python.str(sk.Aseed).encode())
         let t = self.getLatticePoint(A: A, s: s1, e: s2)
         let rho1 = self.getRandomBytes(count: 32)
@@ -351,12 +337,9 @@ class DilithiumLite {
         while true {
             let y1 = self.expandMask(seed: self.np.array(rho1).tobytes(), kappa: kappa, noOfPoly: self.m)
             let y2 = self.expandMask(seed: self.np.array(rho2).tobytes(), kappa: kappa, noOfPoly: self.n)
-            
             let w = self.getLatticePoint(A: A, s: y1, e: y2)
             let omega = self.hashlib.shake_256(self.np.array(self.getCoefficients(polyList: w)).tobytes())
-            
             let c = self.getChallenge(A: A, t: t, omega: omega.hexdigest(48).encode(), message: Python.str(message).encode())
-
             var z1: [PythonObject] = []
             for i in 0..<Int(s1.size)! {
                 z1.append(self.np.polynomial.Polynomial(self.np.polynomial.polynomial.polydiv(self.np.inner(c.challengePolynomial,s1[i]).coef, self.f.coef)[1])+y1[i])

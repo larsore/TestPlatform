@@ -19,8 +19,7 @@ export class Register extends React.Component {
     }
 
     async handleRegister() {
-
-        await fetch(raw) //raw is the contents of 'baseUrl.txt'
+        await fetch(raw)
             .then(r => r.text())
             .then(text => {
                 Register.RPUrl = text+":5050";
@@ -126,8 +125,7 @@ export class Register extends React.Component {
             Register.changeLabel("RPfinalResponse", RPresponseData["reason"]+": "+RPresponseData["msg"]);
         } else {
             Register.changeLabel("RPfinalResponse", RPresponseData);
-        }
-        
+        } 
     }
 
     render() {

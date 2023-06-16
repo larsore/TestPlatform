@@ -78,7 +78,6 @@ def loadIpAndPara():
         )
     return True
 
-
 def checkKeys(requiredKeys, keys):
     if len(requiredKeys) > len(keys):
         return False
@@ -89,7 +88,6 @@ def checkKeys(requiredKeys, keys):
         return True
     return False
 
-# API Route for register-attempts from Client Application
 @app.route("/register", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientRegister():
@@ -104,7 +102,6 @@ def clientRegister():
     response.headers['Origin'] = responseHandler.getRPID()
     return response
         
-# API Route for register-attempts from Client Application
 @app.route("/authenticate", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientLogin():
@@ -117,7 +114,6 @@ def clientLogin():
     response = responseHandler.handleLogin(body)
     return response 
 
-# API Route for register-attempts from Client Application
 @app.route("/authenticator/register", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorRegisterResponse():
@@ -132,7 +128,6 @@ def clientAuthenticatorRegisterResponse():
     response = responseHandler.handleRegisterResponse(body)
     return response 
 
-# API Route for register-attempts from Client Application
 @app.route("/authenticator/authenticate", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorAuthenticateResponse():
@@ -168,7 +163,6 @@ def clientAuthenticatorAuthenticateFailed():
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     response = responseHandler.handleLoginFailed(body)
     return response  
-
 
 if __name__ == "__main__":
     isLoaded = loadIpAndPara()

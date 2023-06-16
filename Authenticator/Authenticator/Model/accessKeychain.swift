@@ -9,7 +9,6 @@ import Foundation
 
 class AccessKeychain {
     
-    
     private static let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
                                                  kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                  .userPresence,
@@ -29,7 +28,6 @@ class AccessKeychain {
             kSecValueData as String: item as AnyObject,
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
-        
         guard status != errSecDuplicateItem else {
             throw KeychainError.duplicateEntry
         }
@@ -49,7 +47,6 @@ class AccessKeychain {
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
         return result as? Data
     }
 }

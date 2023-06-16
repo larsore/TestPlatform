@@ -22,7 +22,6 @@ class Handler:
     isActive = {}
     timers = {}
     timeout = 30 #sekunder
-
     RPID = None
 
     dbClient = pymongo.MongoClient(('mongodb://localhost:27017/'))
@@ -76,22 +75,16 @@ class Handler:
     def handleLogin(cls, body):
         if body["username"] not in list(cls.credentials):
             return json.dumps("User with username: '"+body["username"]+"' has not registered...")
-        
         if body["username"] in list(cls.isActive.keys()) and cls.isActive[body["username"]]["A"]:
             return json.dumps(body["username"]+" is in the middle of an authentication procedure...")
-    
         challenge = Handler.getChallenge()
         cls.credentials[body["username"]]["challenge"] = challenge
-
         credID = cls.credentials[body["username"]]["A"]["credential_id"]
         authID = cls.credentials[body["username"]]["authenticator_id"]
-
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], False ,))
         cls.timers[body["username"]].start()
-        
         cls.credentials[body["username"]]["timedOut"] = False
         cls.isActive[body["username"]]["A"] = True
-        
         return json.dumps({
             "rp_id":cls.RPID,
             "challenge":challenge,
@@ -108,13 +101,10 @@ class Handler:
             return json.dumps({
                 "msg": "Timed out!", 
                 "reason": "timeout"})
-        
         cls.isActive[body["username"]]["A"] = False
-       
         expectedHash = sha256()
         expectedHash.update(cls.RPID.encode())
         expectedHash.update(cls.credentials[body["username"]]["challenge"].encode())
-
         pubKey = cls.credentials[body["username"]]["A"]["pubKey"]
         pubKeyVerify = {
             "t": Handler.coeffsToPolynomial(np.array(pubKey["t"])),
@@ -137,7 +127,6 @@ class Handler:
     def handleRegister(cls, body):
         if body["username"] in list(cls.credentials.keys()):
             return json.dumps(body["username"]+" already registered")
-        
         challenge = Handler.getChallenge()
         cls.credentials[body["username"]] = {
             "challenge": challenge,
@@ -147,15 +136,12 @@ class Handler:
             },
             "timedOut": False
         }
-
         cls.isActive[body["username"]] = {
             "R": True,
             "A": False
         }
-
         cls.timers[body["username"]] = Timer(cls.timeout, cls.handleTimeout, args=(body["username"], True ,))
         cls.timers[body["username"]].start()
-
         return json.dumps({
             "challenge": challenge,
             "rp_id": cls.RPID,
@@ -198,12 +184,10 @@ class Handler:
             return json.dumps({
                 "msg": "Timed out!", 
                 "reason": "timeout"})
-
         cls.isActive[body["username"]]["R"] = False
         expectedHash = sha256()
         expectedHash.update(cls.RPID.encode())
         expectedHash.update(cls.credentials[body["username"]]["challenge"].encode())
-
         if expectedHash.hexdigest() == body["client_data"]:
             cls.timers[body["username"]].cancel()
             docs = cls.credentialCollection.find({"username": body["username"]})
@@ -260,7 +244,6 @@ class Handler:
             k+=1
             if len(s) >= cls.eta:
                 break
-
         taken = []
         start = cls.d-cls.eta
         for i in range(start, cls.d):
@@ -300,50 +283,32 @@ class Handler:
 
     @classmethod
     def verifySig(cls, pubKey, sig, clientData):
-        
         A = cls.expandA(pubKey["Aseed"].encode())
-
         t = pubKey["t"]
         omega = sig["omega"]
         z1 = sig["z1"]
         z2 = sig["z2"]
         c = sig["c"]
-
         ACoeffs = []
         for row in A:
             r = []
             for poly in row:
                 r.append(poly.coef)
             ACoeffs.append(r)
-
         expectedHash = shake_256()
         expectedHash.update(np.array(ACoeffs).tobytes())
         expectedHash.update(np.array(Handler.polynomialToCoeffs(t)).tobytes())
         expectedHash.update(omega.encode())
         expectedHash.update(clientData.encode())
-
         if expectedHash.hexdigest(48) != c:
             return False
-        
         cPoly = cls.hashToBall(expectedHash.hexdigest(48).encode())
         ct = np.array([cPoly*p for p in t])
         omegaprime = np.inner(A, z1)+z2-ct
         omegaprime = np.array([Polynomial((p % cls.f).coef % cls.q) for p in omegaprime])
-
         if not shake_256(np.array(Handler.polynomialToCoeffs(omegaprime), dtype=int).tobytes()).hexdigest(48) == omega:
             return False
-        
         concatenatedList = np.array(Handler.polynomialToCoeffs(z1) + Handler.polynomialToCoeffs(z2)).flatten()
-
         if np.any(np.absolute(concatenatedList) > cls.approxBeta):
             return False
-        
         return True
-    
-
-
-        
-
-
-
-

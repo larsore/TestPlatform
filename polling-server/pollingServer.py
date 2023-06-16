@@ -57,7 +57,6 @@ def authenticatorUpdate():
     response = pollingHandler.handleAuthenticatorUpdate(body)
     return response
 
-# Authenticator API Route to check for incoming registration or authentication attempts
 @app.route("/authenticator/poll", methods=['POST'])
 def authenticatorPost():
     body = request.json
@@ -69,7 +68,6 @@ def authenticatorPost():
     response = pollingHandler.handlePOSTAuthenticator(body)
     return response
 
-# Client API Route to POST registration attempts
 @app.route("/client/register", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientRegister():
@@ -84,7 +82,6 @@ def clientRegister():
     response = pollingHandler.handlePOSTClientRegister(body)
     return response
 
-# Client API Route to POST authentication attempts
 @app.route("/client/authenticate", methods=['POST'])
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticate():
@@ -97,7 +94,6 @@ def clientAuthenticate():
     response = pollingHandler.handlePOSTClientAuthenticate(body)
     return response
 
-# Authenticator API Route to POST registration data
 @app.route("/authenticator/register", methods=['POST'])
 def authenticatorRegister():
     body = request.json
@@ -120,7 +116,6 @@ def authenticatorDismiss():
     response = pollingHandler.handleDismissal(body)
     return response
 
-# Authenticator API Route to POST authentication data
 @app.route("/authenticator/authenticate", methods=['POST'])
 def authenticatorAuthenticate():
     body = request.json

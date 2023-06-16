@@ -7,7 +7,6 @@
 
 import Foundation
 
-
 class CommunicateWithServer {
     
     private static var baseURL: String?
@@ -33,7 +32,6 @@ class CommunicateWithServer {
         case ResponseCodeNot200
     }
     
-    
     static func pollServer(hashedDeviceID: String) async throws -> GetMessage? {
         guard let baseUrl = CommunicateWithServer.baseURL else {
             print("BaseUrl not set")
@@ -57,16 +55,12 @@ class CommunicateWithServer {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
         guard let payload = try? JSONSerialization.data(withJSONObject: body, options: .fragmentsAllowed) else {
             print("Unable to JSON serialize HTTP body into a payload")
             return nil
         }
-        
         let (data, response) = try await URLSession.shared.upload(for: request, from: payload)
-        
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { fatalError("Error while fetching data") }
-        
         return data
     }
     
