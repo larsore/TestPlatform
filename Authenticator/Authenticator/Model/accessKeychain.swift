@@ -46,7 +46,7 @@ class AccessKeychain {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let _ = SecItemCopyMatching(query as CFDictionary, &result)
         return result as? Data
     }
 }

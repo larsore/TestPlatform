@@ -47,8 +47,7 @@ class CommunicateWithServer {
             print("Unable to get response from server")
             return nil
         }
-        let message = try JSONDecoder().decode(GetMessage.self, from: data)
-        return message
+        return try JSONDecoder().decode(GetMessage.self, from: data)
     }
     
     private static func post(url: URL, body: [String: Any]) async throws -> Data? {
@@ -85,7 +84,7 @@ class CommunicateWithServer {
             print("Unable to get response from server")
             return
         }
-        let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+        let _ = try JSONDecoder().decode(SuccessInfo.self, from: data)
     }
     
     
@@ -112,7 +111,7 @@ class CommunicateWithServer {
             print("Unable to get response from server")
             return
         }
-        let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+        let _ = try JSONDecoder().decode(SuccessInfo.self, from: data)
     }
     
     //DISMISSAL
@@ -144,7 +143,7 @@ class CommunicateWithServer {
                     print("Unable to get dismissal response from server")
                     return
                 }
-                let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+                let _ = try JSONDecoder().decode(SuccessInfo.self, from: data)
             }
         }
     }
@@ -167,7 +166,7 @@ class CommunicateWithServer {
                 print("Unable to get update response from server")
                 return
             }
-            let successInfo = try JSONDecoder().decode(SuccessInfo.self, from: data)
+            let _ = try JSONDecoder().decode(SuccessInfo.self, from: data)
         }
     }
     

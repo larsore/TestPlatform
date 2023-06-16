@@ -94,7 +94,7 @@ def clientRegister():
     body = request.json
     for key in body.keys():
         body[key] = str(body[key])
-    requiredKeys = ["username", "otp"]
+    requiredKeys = ["username"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))
     responseBody = responseHandler.handleRegister(body)
@@ -118,10 +118,8 @@ def clientLogin():
 @cross_origin(origins=[macClientUrl, iPhoneClientUrl, "http://localhost:3000"])
 def clientAuthenticatorRegisterResponse():
     body = request.json
-    
     for key in body.keys():
         body[key] = str(body[key])
-
     requiredKeys = ["public_key_t", "public_key_seed", "credential_id", "client_data", "username", "authenticator_id"]
     if not checkKeys(requiredKeys, list(body.keys())):
         return json.dumps("The provided key is not correct. The correct key is " + ' '.join(requiredKeys))

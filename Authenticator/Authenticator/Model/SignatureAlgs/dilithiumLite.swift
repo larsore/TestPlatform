@@ -66,7 +66,6 @@ class DilithiumLite {
         var z2Coeffs: [[Int]]
         var cHex: String
         var omega: String
-        var attempts: Int
     }
     
     struct Challenge {
@@ -353,8 +352,7 @@ class DilithiumLite {
                     z1Coeffs: self.getCoefficients(polyList: self.np.array(z1)),
                     z2Coeffs: self.getCoefficients(polyList: self.np.array(z2)),
                     cHex: c.challengeHex,
-                    omega: String(omega.hexdigest(48))!,
-                    attempts: k
+                    omega: String(omega.hexdigest(48))!
                 )
             }
             k += 1

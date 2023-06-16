@@ -42,8 +42,7 @@ export class Register extends React.Component {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                "username": username,
-                "otp": otp
+                "username": username
             })
         };
         const RPresponse = await fetch(Register.RPUrl+'/register', RPrequestOptions);
@@ -93,8 +92,6 @@ export class Register extends React.Component {
         }
         Register.changeLabel("authenticatorResponse", "Response from authenticator recieved");
         
-        const authID = pollingData["authenticator_id"]
-
         const RPresponseOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -104,7 +101,7 @@ export class Register extends React.Component {
                 "public_key_t": pollingData["public_key_t"],
                 "public_key_seed": pollingData["public_key_seed"],
                 "client_data": pollingData["client_data"],
-                "authenticator_id": authID
+                "authenticator_id": pollingData["authenticator_id"]
             })
         };
         const RPresponseResponse = await fetch(Register.RPUrl+'/authenticator/register', RPresponseOptions);
@@ -115,7 +112,7 @@ export class Register extends React.Component {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    "authenticator_id": authID,
+                    "authenticator_id": pollingData["authenticator_id"],
                     "username": username
                 })
             };
