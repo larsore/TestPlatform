@@ -6,7 +6,7 @@ import raw from './baseUrl.txt';
 export class Register extends React.Component {
 
     static username = ""
-    static authID = ""
+    static otp = ""
     static RPUrl = "";
     static pollingUrl = "";
     
@@ -31,22 +31,19 @@ export class Register extends React.Component {
         document.getElementById('RPfinalResponse').innerHTML = "";
 
         const username = Register.username;
-        const authID = Register.authID;
+        const otp = Register.otp;
 
-        if (username === "" || authID === "") {
+        if (username === "" || otp === "") {
             Register.changeLabel("RPregResponse", "Please fill in both a username and an authenticator ID");
             return
         }
-
-        var hashedAuthID = sha256.create();
-        hashedAuthID.update(authID);
 
         const RPrequestOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 "username": username,
-                "otp": authID
+                "otp": otp
             })
         };
         const RPresponse = await fetch(Register.RPUrl+'/register', RPrequestOptions);
@@ -71,7 +68,7 @@ export class Register extends React.Component {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                "otp": authID,
+                "otp": otp,
                 "rp_id": rp_id,
                 "client_data": clientData,
                 "timeout": timeout,
@@ -96,6 +93,8 @@ export class Register extends React.Component {
         }
         Register.changeLabel("authenticatorResponse", "Response from authenticator recieved");
         
+        const authID = pollingData["authenticator_id"]
+
         const RPresponseOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -105,7 +104,7 @@ export class Register extends React.Component {
                 "public_key_t": pollingData["public_key_t"],
                 "public_key_seed": pollingData["public_key_seed"],
                 "client_data": pollingData["client_data"],
-                "authenticator_id": pollingData["authenticator_id"]
+                "authenticator_id": authID
             })
         };
         const RPresponseResponse = await fetch(Register.RPUrl+'/authenticator/register', RPresponseOptions);
@@ -116,7 +115,7 @@ export class Register extends React.Component {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    "authenticator_id": hashedAuthID.hex(),
+                    "authenticator_id": authID,
                     "username": username
                 })
             };
@@ -141,7 +140,7 @@ export class Register extends React.Component {
                             <input type="text" name='username' onChange={(e) => Register.username=e.target.value} placeholder='Username'/>
                         </div>
                         <div className="form-group">
-                            <input type="text" name='auth-id' onChange={(e) => Register.authID=e.target.value} placeholder='One time code'/>
+                            <input type="text" name='otp' onChange={(e) => Register.otp=e.target.value} placeholder='One time code'/>
                         </div>
                     </div>
                 </div>
