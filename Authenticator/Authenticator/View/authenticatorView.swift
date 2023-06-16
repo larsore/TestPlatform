@@ -27,18 +27,13 @@ struct authenticatorView: View {
         }
     }
     
-    let pasteboard = UIPasteboard.general
-    
     @State private var showRegisterAlert = false
     @State private var showAuthAlert = false
     @State private var isDeciding = false
-    @State private var showCheckMark = false
-    @State private var showDeviceID = false
     @State var isSigning = false
     @State var doneSigning = false
     @State var registerAlertText = ""
     @State var authAlertText = ""
-    @State private var deviceID = UIDevice.current.identifierForVendor!.uuidString
     @State private var lastMessage: CommunicateWithServer.GetMessage? = nil
     @State private var seconds = 1
     @State private var oldOtp = Int.random(in: 1...999999)
@@ -65,31 +60,6 @@ struct authenticatorView: View {
                         .foregroundColor(Color.black)
                         .padding(1)
                         .bold()
-                }
-                if showDeviceID {
-                    VStack {
-                        Text(deviceID)
-                            .font(.subheadline)
-                            .foregroundColor(Color.black)
-                            .padding(10)
-                        if !showCheckMark {
-                            Button("Copy to clipboard") {
-                                pasteboard.string = deviceID
-                                showCheckMark = true
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(Color(white: 0.3745))
-                        } else {
-                            let startX = 200
-                            let startY = 18
-                            Path() { path in
-                            path.move(to: CGPoint(x: startX, y: startY))
-                            path.addLine(to: CGPoint(x: startX+10, y: startY+15))
-                            path.addLine(to: CGPoint(x: startX+25, y: startY-10))
-                            }
-                            .stroke(Color.green, lineWidth: 3)
-                        }
-                    }
                 }
             }
             .alert(registerAlertText, isPresented: $showRegisterAlert) {
