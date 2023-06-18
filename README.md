@@ -1,155 +1,69 @@
+# FIDO-Inspired Authentication System
+
+This authentication system is developed as part of a master thesis and is inspired by the FIDO protocol specifications defined by the FIDO Alliance. The system consists of four key components: an authenticator iOS application, a client application, a polling server serving as the authenticator back-end, and a relying party server. The system source code is hosted on GitHub.
+
+## Features
+
+- Implements FIDO-inspired authentication protocol.
+- Secure communication between client, authenticator, polling server, and relying party server.
+- Integration with iOS devices for the authenticator application.
+- Provides seamless authentication experience for users.
+
+## System Components
+
+1. **Authenticator iOS Application**:
+   - Developed using Swift programming language and iOS frameworks.
+   - Enables secure authentication using FIDO-inspired protocols.
+   - Provides user-friendly authentication interfaces.
+   - Implements secure communication with the polling server.
+
+2. **Client Application**:
+   - Interacts with the authenticator and the relying party server.
+   - Initiates authentication requests.
+   - Receives and verifies authentication responses.
+
+3. **Polling Server**:
+   - Serves as the back-end for the authenticators.
+   - Handles authentication requests and responses.
+   - Maintains secure communication with authenticators and relying party server.
+   - Implements necessary security measures to protect sensitive data.
+
+4. **Relying Party Server**:
+   - Receives authentication requests from the client application.
+   - Validates authentication responses received from the authenticator and polling server.
+   - Manages user accounts and authentication data.
+   - Integrates with the client application for seamless authentication flow.
+
+## Repository Structure
+
+- `authenticator-ios/`: Contains the source code and documentation for the authenticator iOS application.
+- `client-app/`: Contains the source code and documentation for the client application.
+- `polling-server/`: Contains the source code and documentation for the polling server.
+- `relying-party-server/`: Contains the source code and documentation for the relying party server.
+
+## Installation and Usage
+
+1. Clone the repository using the following command: ```git clone https://github.com/your-username/repo-name.git```
 
 
-Authentication scheme following WebAuthn/FIDO architecture. Signing procedure uses Baby-Dilithium.
 
-The following APIs are used in the communication between server, client, pollingServer and authenticator
+2. Follow the instructions in each component's respective directory to set up and configure the required dependencies.
 
-## /client/register
-Used by client to send a new credential to the pollingServer. 
-### POST-request (fra client -> pollingServer):
-```json
-{
-    "authenticator_id": 33498
-    "credential_id": ""
-    "rp_id": 1,
-    "client_data": "dummy data"
-}
-```
+3. Start by running the relying party server, followed by the polling server, client application, and authenticator iOS application.
 
-### response (fra pollingServer -> client):
-If OK, return True
-else return False/error
+4. Refer to the documentation provided in each component directory for detailed instructions on usage and configuration.
 
+## Contributing
 
-## /client/authenticate
-Used by client to send credential
-### POST-request (fra client -> pollingServer):
-```json
-{
-    "authenticator_id": 33498,
-    "credential_id": 453
-    "rp_id": 1,
-    "client_data": "dummy data"
-}
-```
-### Response (fra pollingServer -> Client):
-If OK, return True
-else return False/error
+We welcome contributions to enhance the system's functionality, security, and usability. If you would like to contribute, please follow the guidelines outlined in the `CONTRIBUTING.md` file.
 
-## /authenticator/poll/authenticatorID
-Used by authenticator to poll the pollingServer. 
-Authenticator sends credential ID to check if the pollingServer has any new credentials for the authenticator
+## License
 
-### GET-request (fra authenticator -> pollingServer):
-```
-GET /polling/<authenticatorID>
-```
+This authentication system is open-source and released under the [MIT License](LICENSE).
 
-### response (fra pollingServer -> authenticator):
-```json
+## Contact
 
-{
-    "credential_id": 35,
-    "rp_id": 1,
-    "client_data": "dummy data"
-}
-```
-
-## /register
-Used by client to register a new user with the server
-
-### request (fra client -> server):
-```json
-{
-    "username":"vegard",
-    "authenticator_nickname":"myYubiKey1"
-}
-```
-
-### response (fra server -> client):
-```json
-{
-    "publicKey": {
-        "attestation": "none",
-        "authenticatorSelection": {
-            "authenticatorAttachment": "platform",
-            "requireResidentKey": true,
-            "userVerification": "required"
-        },
-        "challenge": 328,
-        "excludeCredentials": [],
-        "pubKeyCredParams": [
-            {
-                "alg": "baby-dilithium",
-                "type": "public-key"
-            }
-        ],
-        "rp": {
-            "id": 1,
-            "name": "Master Thesis"
-        },
-        "timeout": 30000,
-        "user": {
-            "displayName": "julenissen3",
-            "id": "julenissen3"
-        }
-    }
-}
-```
+For any inquiries or feedback, please contact the project team at [email address].
 
 
-## /register/verification
-Last step in register sequence. Client sends public key and more received from authenticator to the server for verification storage.
 
-### request (fra client -> server):
-```json
-{
-    "public_key": {
-        "matrix_a":[1,2,3,4],
-        "vector_t":[1,2,3,4]
-        },
-    "credential_id": "credID",
-    "client_data": "226f76b55acb49701e06ded1d95165d179458f6fc37f5c6fc760ae30dec1c378",
-    "signature": "signature"
-}
-```
-### response (fra server -> client):
-
-"Verifikasjon OK. Du kan naa logge inn"
-
-## /auth
-Used by client to log in. Sends username, receives challenge ++
-
-### request (fra client -> server):
-```json
-{
-    "username": "vegard"
-}
-```
-
-
-### response (fra server -> client):
-```json
-{
-    "rpID": 1,
-    "credential_id": "credID",
-    "challenge": 377
-}
-```
-
-## /auth/verification
-Last step in authentication sequence. Client sends response signed by authenticator to the server. Server verifies the challenge and signature.
-
-### request (fra client -> server):
-```json
-{
-    "client_data": "dummy",
-    "authenticator_data": "dummy",
-    "signature": "dummy"
-}
-```
-
-
-### response (fra server -> client):
-
-"SUCCESS! You are now logged in as user 'vegard'"
